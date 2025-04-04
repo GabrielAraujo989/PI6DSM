@@ -15,7 +15,13 @@ COPY . .
 # Compilar a aplicação
 RUN npm run build
 
-# Remover arquivos desnecessários
+# Criar script de inicialização
+RUN echo '#!/bin/sh' > /usr/src/app/start.sh && \
+    echo 'npm run migration:run' >> /usr/src/app/start.sh && \
+    echo 'node dist/src/main.js' >> /usr/src/app/start.sh && \
+    chmod +x /usr/src/app/start.sh
+
+# Remover arquivos desnecessários, mas manter node_modules para as migrações
 RUN npm prune --production && \
     rm -rf src/ test/ node_modules/.cache
 
@@ -26,9 +32,5 @@ EXPOSE 8082
 ENV NODE_ENV=production
 ENV PORT=8082
 
-# Criar script de inicialização
-RUN echo '#!/bin/sh\nnpm run migration:run\nnode dist/src/main.js' > /usr/src/app/start.sh && \
-    chmod +x /usr/src/app/start.sh
-
 # Comando para iniciar a aplicação
-CMD ["/usr/src/app/start.sh"]
+CMD ["/bin/sh", "/usr/src/app/start.sh"]
