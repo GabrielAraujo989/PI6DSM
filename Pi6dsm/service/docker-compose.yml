@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: gabriel05101994
+      POSTGRES_DB: registration_data
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - FMPG-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    ports:
+      - "8081:8081"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=gabriel05101994
+      - DB_DATABASE=registration_data
+      - JWT_SECRET=GabrielFelipePaulianeMatheus
+      - JWT_EXPIRATION=1d
+      - API_PORT=8081
+      - DB_SSL=false
+      - ENCRYPTION_KEY=DadosvoammasmeucORACAOencriptado
+    depends_on:
+      - postgres
+    networks:
+      - FMPG-network
+
+volumes:
+  postgres_data:
+
+networks:
+  FMPG-network:
+    driver: bridge
