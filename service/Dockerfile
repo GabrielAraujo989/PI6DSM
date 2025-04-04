@@ -20,11 +20,15 @@ RUN npm prune --production && \
     rm -rf src/ test/ node_modules/.cache
 
 # Expor a porta da aplicação
-EXPOSE 8081
+EXPOSE 8082
 
 # Definir variáveis de ambiente
 ENV NODE_ENV=production
-ENV PORT=8081
+ENV PORT=8082
+
+# Criar script de inicialização
+RUN echo '#!/bin/sh\nnpm run migration:run\nnode dist/src/main.js' > /usr/src/app/start.sh && \
+    chmod +x /usr/src/app/start.sh
 
 # Comando para iniciar a aplicação
-CMD ["node", "dist/src/main.js"]
+CMD ["/usr/src/app/start.sh"]

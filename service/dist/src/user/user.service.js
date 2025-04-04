@@ -47,7 +47,7 @@ let UserService = class UserService {
             name: this.encryptionService.encrypt(createUserDto.name),
             email: this.encryptionService.encrypt(createUserDto.email),
             cpf: this.encryptionService.encrypt(createUserDto.cpf),
-            birthDate: this.encryptionService.encrypt(createUserDto.birthDate),
+            birthDate: createUserDto.birthDate,
             password: hashedPassword,
         };
         const user = this.userRepository.create(encryptedUser);
@@ -92,7 +92,7 @@ let UserService = class UserService {
             encryptedUpdateData.cpf = this.encryptionService.encrypt(updateUserDto.cpf);
         }
         if (updateUserDto.birthDate) {
-            encryptedUpdateData.birthDate = this.encryptionService.encrypt(updateUserDto.birthDate);
+            encryptedUpdateData.birthDate = updateUserDto.birthDate;
         }
         if (updateUserDto.password) {
             encryptedUpdateData.password = await bcrypt.hash(updateUserDto.password, 10);
@@ -125,7 +125,7 @@ let UserService = class UserService {
             name: this.encryptionService.decrypt(user.name),
             email: this.encryptionService.decrypt(user.email),
             cpf: this.encryptionService.decrypt(user.cpf),
-            birthDate: new Date(this.encryptionService.decrypt(user.birthDate.toString())),
+            birthDate: user.birthDate,
         };
         return decryptedUser;
     }

@@ -7,7 +7,7 @@ const config_1 = require("@nestjs/config");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);
-    const port = configService.get('API_PORT') || 8081;
+    const port = configService.get('API_PORT') || 8082;
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,

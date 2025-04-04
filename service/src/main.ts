@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('API_PORT') || 8081;
+  const port = configService.get<number>('API_PORT') || 8082;
 
   app.useGlobalPipes(
     new ValidationPipe({

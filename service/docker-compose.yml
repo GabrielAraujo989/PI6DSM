@@ -21,7 +21,7 @@ services:
       dockerfile: Dockerfile
     container_name: app
     ports:
-      - "8081:8081"
+      - "8082:8082"
     environment:
       - NODE_ENV=development
       - DB_HOST=postgres
@@ -31,7 +31,7 @@ services:
       - DB_DATABASE=registration_data
       - JWT_SECRET=GabrielFelipePaulianeMatheus
       - JWT_EXPIRATION=1d
-      - API_PORT=8081
+      - API_PORT=8082
       - DB_SSL=false
       - ENCRYPTION_KEY=DadosvoammasmeucORACAOencriptado
     depends_on:
