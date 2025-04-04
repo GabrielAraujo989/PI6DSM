@@ -1,0 +1,168 @@
+# TESTES DE API - PI6DSM
+
+## Configuração Inicial
+1. Importe as seguintes variáveis de ambiente no Postman:
+   - baseUrl: http://localhost:8081
+   - token: (será preenchido após o login)
+
+## Autenticação
+
+### Login
+- Método: POST
+- URL: {{baseUrl}}/auth/login
+- Body (JSON):
+```json
+{
+  "email": "ga.padua92@gmail.com",
+  "password": "123@gabriel"
+}
+```
+- Após o login, copie o token JWT retornado e salve na variável de ambiente "token"
+
+## Usuários
+
+### Registrar Novo Usuário
+- Método: POST
+- URL: {{baseUrl}}/users/register
+- Body (JSON):
+```json
+{
+  "name": "Usuário Teste",
+  "birthDate": "1990-01-01",
+  "cpf": "12345678901",
+  "photoUrl": "https://exemplo.com/foto.jpg",
+  "email": "teste@exemplo.com",
+  "password": "senha123",
+  "role": "CLIENT"
+}
+```
+
+### Listar Todos os Usuários
+- Método: GET
+- URL: {{baseUrl}}/users
+- Headers:
+  - Authorization: Bearer {{token}}
+
+### Buscar Usuário por ID
+- Método: GET
+- URL: {{baseUrl}}/users/:id
+- Headers:
+  - Authorization: Bearer {{token}}
+- Substitua :id pelo ID do usuário retornado na listagem
+
+### Atualizar Usuário
+- Método: PATCH
+- URL: {{baseUrl}}/users/:id
+- Headers:
+  - Authorization: Bearer {{token}}
+- Body (JSON):
+```json
+{
+  "name": "Nome Atualizado",
+  "email": "novo@exemplo.com",
+  "photoUrl": "https://exemplo.com/nova-foto.jpg"
+}
+```
+
+### Desativar Usuário
+- Método: PATCH
+- URL: {{baseUrl}}/users/:id
+- Headers:
+  - Authorization: Bearer {{token}}
+- Body (JSON):
+```json
+{
+  "isActive": false
+}
+```
+
+### Excluir Usuário
+- Método: DELETE
+- URL: {{baseUrl}}/users/:id
+- Headers:
+  - Authorization: Bearer {{token}}
+
+## Testes de Segurança
+
+### Tentativa de Login com Credenciais Inválidas
+- Método: POST
+- URL: {{baseUrl}}/auth/login
+- Body (JSON):
+```json
+{
+  "email": "email@invalido.com",
+  "password": "senhaerrada"
+}
+```
+
+### Tentativa de Acesso sem Token
+- Método: GET
+- URL: {{baseUrl}}/users
+- Não inclua o header de Authorization
+
+### Tentativa de Acesso com Token Inválido
+- Método: GET
+- URL: {{baseUrl}}/users
+- Headers:
+  - Authorization: Bearer token_invalido
+
+### Tentativa de Criar Super Usuário (após já ter 4)
+- Método: POST
+- URL: {{baseUrl}}/users/register
+- Headers:
+  - Authorization: Bearer {{token}}
+- Body (JSON):
+```json
+{
+  "name": "Quinto Super Usuário",
+  "birthDate": "1990-01-01",
+  "cpf": "98765432100",
+  "photoUrl": "https://exemplo.com/foto.jpg",
+  "email": "super5@exemplo.com",
+  "password": "senha123",
+  "role": "SUPER_USER"
+}
+```
+
+### Tentativa de Atualizar Super Usuário
+- Método: PATCH
+- URL: {{baseUrl}}/users/:id
+- Headers:
+  - Authorization: Bearer {{token}}
+- Body (JSON):
+```json
+{
+  "name": "Tentativa de Alterar Super Usuário"
+}
+```
+- Substitua :id pelo ID de um usuário com role SUPER_USER
+
+## Testes de Criptografia
+
+### Verificar Dados Criptografados no Banco
+- Após criar um usuário, verifique no banco de dados se os campos name, email e cpf estão criptografados
+- Use o comando: SELECT * FROM users;
+
+### Verificar Dados Descriptografados na API
+- Após criar um usuário, faça uma requisição GET para buscar o usuário
+- Verifique se os campos name, email e cpf estão descriptografados na resposta
+
+## Fluxo Completo de Teste
+
+1. Faça login com o super usuário
+2. Crie um novo usuário CLIENT
+3. Liste todos os usuários
+4. Busque o usuário criado pelo ID
+5. Atualize o usuário
+6. Desative o usuário
+7. Ative o usuário novamente
+8. Exclua o usuário
+9. Verifique se o usuário foi excluído
+
+## Observações
+
+- Todos os endpoints (exceto login e registro) requerem autenticação
+- Apenas SUPER_USER pode criar outros SUPER_USER
+- SUPER_USER não podem ser alterados ou excluídos
+- Dados sensíveis (nome, email, CPF) são criptografados no banco de dados
+- A data de nascimento é armazenada como date no banco de dados 
