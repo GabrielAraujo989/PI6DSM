@@ -20,7 +20,7 @@ export class UserService {
 
     // Verificar se já existe usuário com o mesmo email ou CPF
     const existingUser = await this.userRepository.findOne({
-      where: [{ email: this.encryptionService.encrypt(email) }, { cpf: this.encryptionService.encrypt(cpf) }],
+      where: [{ email }, { cpf: this.encryptionService.encrypt(cpf) }],
     });
 
     if (existingUser) {
@@ -45,7 +45,7 @@ export class UserService {
     const encryptedUser = {
       ...createUserDto,
       name: this.encryptionService.encrypt(createUserDto.name),
-      email: this.encryptionService.encrypt(createUserDto.email),
+      email: createUserDto.email, // Não criptografar o email
       cpf: this.encryptionService.encrypt(createUserDto.cpf),
       birthDate: createUserDto.birthDate, // Não criptografar a data
       password: hashedPassword,
@@ -56,20 +56,24 @@ export class UserService {
   }
 
   async findAll(): Promise<User[]> {
-    const users = await this.userRepository.find();
-    return this.decryptUsers(users);
+    const users = await this.userRepository.find({
+      select: ['id', 'name', 'email', 'role', 'birthDate', 'cpf', 'photoUrl', 'isActive', 'createdAt', 'updatedAt', 'lastLogin'],
+    });
+    return users.map(user => this.decryptUser(user));
   }
 
   async findOne(id: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({
+      where: { id },
+      select: ['id', 'name', 'email', 'role', 'birthDate', 'cpf', 'photoUrl', 'isActive', 'createdAt', 'updatedAt', 'lastLogin'],
+    });
     if (!user) return null;
     return this.decryptUser(user);
   }
 
   async findByEmail(email: string): Promise<User> {
-    const encryptedEmail = this.encryptionService.encrypt(email);
     const user = await this.userRepository.findOne({
-      where: { email: encryptedEmail },
+      where: { email },
       select: ['id', 'name', 'email', 'password', 'role', 'birthDate', 'cpf', 'photoUrl', 'isActive', 'createdAt', 'updatedAt', 'lastLogin'],
     });
     if (!user) return null;
@@ -78,47 +82,49 @@ export class UserService {
 
   async update(id: string, updateUserDto: Partial<CreateUserDto>): Promise<User> {
     const user = await this.findOne(id);
-
     if (!user) {
-      throw new Error('Usuário não encontrado');
+      return null;
     }
 
-    // Verificar se está tentando alterar um SUPER_USER
-    if (user.role === UserRole.SUPER_USER) {
-      throw new ForbiddenException('Super Usuários não podem ser alterados');
+    // Se estiver atualizando email ou CPF, verificar se já existe
+    if (updateUserDto.email || updateUserDto.cpf) {
+      const existingUser = await this.userRepository.findOne({
+        where: [
+          { email: updateUserDto.email },
+          { cpf: this.encryptionService.encrypt(updateUserDto.cpf) }
+        ],
+      });
+
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Email ou CPF já cadastrado');
+      }
     }
 
-    // Criptografar dados pessoais que estão sendo atualizados
-    const encryptedUpdateData: any = {};
-    
+    // Criptografar dados pessoais se fornecidos
+    const encryptedData: Partial<User> = {};
     if (updateUserDto.name) {
-      encryptedUpdateData.name = this.encryptionService.encrypt(updateUserDto.name);
+      encryptedData.name = this.encryptionService.encrypt(updateUserDto.name);
     }
-    
     if (updateUserDto.email) {
-      encryptedUpdateData.email = this.encryptionService.encrypt(updateUserDto.email);
+      encryptedData.email = updateUserDto.email; // Não criptografar o email
     }
-    
     if (updateUserDto.cpf) {
-      encryptedUpdateData.cpf = this.encryptionService.encrypt(updateUserDto.cpf);
+      encryptedData.cpf = this.encryptionService.encrypt(updateUserDto.cpf);
     }
-    
-    if (updateUserDto.birthDate) {
-      encryptedUpdateData.birthDate = updateUserDto.birthDate; // Não criptografar a data
-    }
-    
     if (updateUserDto.password) {
-      encryptedUpdateData.password = await bcrypt.hash(updateUserDto.password, 10);
+      encryptedData.password = await bcrypt.hash(updateUserDto.password, 10);
     }
-    
-    // Adicionar outros campos não criptografados
-    if (updateUserDto.role) encryptedUpdateData.role = updateUserDto.role;
-    if (updateUserDto.photoUrl) encryptedUpdateData.photoUrl = updateUserDto.photoUrl;
-    if (updateUserDto.isActive !== undefined) encryptedUpdateData.isActive = updateUserDto.isActive;
 
-    Object.assign(user, encryptedUpdateData);
-    const updatedUser = await this.userRepository.save(user);
-    return this.decryptUser(updatedUser);
+    // Atualizar outros campos não criptografados
+    Object.assign(encryptedData, {
+      birthDate: updateUserDto.birthDate,
+      photoUrl: updateUserDto.photoUrl,
+      role: updateUserDto.role,
+      isActive: updateUserDto.isActive,
+    });
+
+    await this.userRepository.update(id, encryptedData);
+    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
@@ -139,16 +145,12 @@ export class UserService {
   // Métodos auxiliares para descriptografar dados
   private decryptUser(user: User): User {
     if (!user) return null;
-    
-    const decryptedUser = {
+    return {
       ...user,
       name: this.encryptionService.decrypt(user.name),
-      email: this.encryptionService.decrypt(user.email),
+      email: user.email, // Não descriptografar o email
       cpf: this.encryptionService.decrypt(user.cpf),
-      birthDate: user.birthDate, // Não descriptografar a data
     };
-    
-    return decryptedUser;
   }
 
   private decryptUsers(users: User[]): User[] {
