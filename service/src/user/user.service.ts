@@ -21,7 +21,7 @@ export class UserService {
     // Verificar se já existe usuário com o mesmo email ou CPF
     const existingUser = await this.userRepository.findOne({
       where: [
-        { email: this.encryptionService.encrypt(email) },
+        { email },
         { cpf: this.encryptionService.encrypt(cpf) }
       ],
     });
@@ -48,7 +48,7 @@ export class UserService {
     const encryptedUser = {
       ...createUserDto,
       name: this.encryptionService.encrypt(createUserDto.name),
-      email: this.encryptionService.encrypt(createUserDto.email),
+      email: createUserDto.email, // Não criptografar o email
       cpf: this.encryptionService.encrypt(createUserDto.cpf),
       birthDate: createUserDto.birthDate,
       password: hashedPassword,
@@ -75,9 +75,8 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User> {
-    const encryptedEmail = this.encryptionService.encrypt(email);
     const user = await this.userRepository.findOne({
-      where: { email: encryptedEmail },
+      where: { email },
       select: ['id', 'name', 'email', 'password', 'role', 'birthDate', 'cpf', 'photoUrl', 'isActive', 'createdAt', 'updatedAt', 'lastLogin'],
     });
     if (!user) return null;
