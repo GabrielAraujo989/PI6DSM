@@ -2,21 +2,47 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
+import helmet from 'helmet';
+import * as compression from 'compression';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'],
+  });
+  
   const configService = app.get(ConfigService);
   const port = configService.get<number>('API_PORT') || 8082;
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
+  // Configurações de segurança
+  if (isProduction) {
+    app.use(helmet());
+    app.use(compression());
+  }
+
+  // CORS
+  app.enableCors({
+    origin: isProduction 
+      ? configService.get<string>('ALLOWED_ORIGINS', '*').split(',')
+      : '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
+  // Pipes globais
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      disableErrorMessages: isProduction,
     }),
   );
 
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+  logger.log(`Application is running on: http://localhost:${port}`);
+  logger.log(`Environment: ${configService.get<string>('NODE_ENV')}`);
 }
 bootstrap();

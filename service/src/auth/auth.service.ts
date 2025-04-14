@@ -12,17 +12,22 @@ export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    this.logger.log('AuthService inicializado');
+    this.logger.log(`JWT Service disponível: ${!!this.jwtService}`);
+  }
 
   async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
     try {
       this.logger.log(`Tentando validar usuário com email: ${email}`);
       
       if (!email || !password) {
+        this.logger.warn('Email ou senha não fornecidos');
         throw new UnauthorizedException('Email e senha são obrigatórios');
       }
 
       const user = await this.userService.findByEmail(email);
+      this.logger.log(`Resultado da busca por email: ${JSON.stringify(user ? { id: user.id, email: user.email } : 'null')}`);
       
       if (!user) {
         this.logger.warn(`Usuário não encontrado para o email: ${email}`);
@@ -57,8 +62,17 @@ export class AuthService {
 
   async login(user: Omit<User, 'password'>) {
     try {
+      this.logger.log('Iniciando processo de login');
+      this.logger.log(`Dados do usuário recebidos: ${JSON.stringify({ id: user?.id, email: user?.email })}`);
+
       if (!user || !user.email || !user.id) {
+        this.logger.error('Dados do usuário inválidos');
         throw new InternalServerErrorException('Dados do usuário inválidos');
+      }
+
+      if (!this.jwtService) {
+        this.logger.error('Serviço JWT não inicializado');
+        throw new InternalServerErrorException('Serviço JWT não inicializado');
       }
 
       this.logger.log(`Gerando token JWT para o usuário: ${user.email}`);
@@ -68,18 +82,21 @@ export class AuthService {
         role: user.role,
       };
 
-      if (!this.jwtService) {
-        throw new InternalServerErrorException('Serviço JWT não inicializado');
+      this.logger.log(`Payload JWT: ${JSON.stringify(payload)}`);
+      
+      try {
+        const token = this.jwtService.sign(payload);
+        this.logger.log('Token JWT gerado com sucesso');
+        return {
+          access_token: token,
+        };
+      } catch (jwtError) {
+        this.logger.error(`Erro ao gerar token JWT: ${jwtError.message}`, jwtError.stack);
+        throw new InternalServerErrorException('Erro ao gerar token de acesso');
       }
-
-      const token = this.jwtService.sign(payload);
-      this.logger.log('Token JWT gerado com sucesso');
-      return {
-        access_token: token,
-      };
     } catch (error) {
-      this.logger.error(`Erro ao gerar token JWT: ${error.message}`, error.stack);
-      throw new InternalServerErrorException('Erro ao gerar token de acesso');
+      this.logger.error(`Erro no processo de login: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Erro ao processar login');
     }
   }
 } 

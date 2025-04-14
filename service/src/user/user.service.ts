@@ -80,7 +80,7 @@ export class UserService {
       select: ['id', 'name', 'email', 'password', 'role', 'birthDate', 'cpf', 'photoUrl', 'isActive', 'createdAt', 'updatedAt', 'lastLogin'],
     });
     if (!user) return null;
-    return this.decryptUser(user);
+    return user; // Não descriptografar durante o login
   }
 
   async update(id: string, updateUserDto: Partial<CreateUserDto>): Promise<User> {
