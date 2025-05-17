@@ -1,0 +1,29 @@
+{
+  "name": "recognition-system",
+  "version": "1.0.0",
+  "description": "A system for object detection and recognition based on images.",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "typescript": "^4.5.4",
+    "jest": "^27.0.6"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.0.2",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "eslint": "^7.32.0"
+  },
+  "keywords": [
+    "recognition",
+    "detection",
+    "images",
+    "typescript"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
