@@ -10,11 +10,14 @@ import {
 } from "react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Componente principal de cadastro e edição de usuário
 export default function Cadastro() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  // Estados para armazenar os dados do formulário
   const [nome, setNome] = useState('');
   const [usuario, setUsuario] = useState('');
   const [email, setEmail] = useState('');
@@ -22,9 +25,11 @@ export default function Cadastro() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [imagem, setImagem] = useState<string | null>(null);
 
+  // Estados para modo de edição e id do usuário
   const [modoEdicao, setModoEdicao] = useState(false);
   const [id, setId] = useState<string | null>(null);
 
+  // Ao abrir a tela, verifica se está em modo de edição e preenche os campos
   useEffect(() => {
     if (params && params.pessoa) {
       const pessoa = JSON.parse(params.pessoa as string);
@@ -39,6 +44,7 @@ export default function Cadastro() {
     }
   }, [params]);
 
+  // Função para escolher imagem da galeria
   const escolherImagem = async () => {
     const resultado = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -52,29 +58,59 @@ export default function Cadastro() {
     }
   };
 
-  const handleSalvar = () => {
+  // Função para salvar cadastro ou edição de forma segura via backend
+  const handleSalvar = async () => {
     if (senha !== confirmarSenha) {
       Alert.alert('Erro', 'As senhas não coincidem.');
       return;
     }
 
-    const novoCadastro = {
-      id: id || Date.now().toString(),
-      nome,
-      username: usuario,
-      email,
+    // Monta o payload conforme o DTO do backend
+    const payload: any = {
+      name: nome,
+      email: email,
       password: senha,
-      foto: imagem,
+      photoUrl: imagem, // O backend espera uma URL, ajuste se for upload
+      role: 'CLIENT', // ou outro papel, se aplicável
+      // birthDate, cpf: adicionar campos se desejar
     };
 
-    if (params.salvarCadastro) {
-      const callback = eval(params.salvarCadastro as string); // CUIDADO: só use isso localmente!
-      callback(novoCadastro);
-    }
+    try {
+      let response;
+      if (modoEdicao && id) {
+        // Edição: PATCH /users/:id (requer token)
+        const token = await AsyncStorage.getItem('token');
+        response = await fetch(`http://localhost:8081/users/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Cadastro: POST /users/register
+        response = await fetch('http://localhost:8081/users/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
 
-    router.back();
+      if (!response.ok) {
+        const errorData = await response.json();
+        Alert.alert('Erro', errorData.message || 'Erro ao salvar usuário');
+        return;
+      }
+
+      Alert.alert('Sucesso', modoEdicao ? 'Usuário atualizado!' : 'Cadastro realizado!');
+      router.back();
+    } catch (error) {
+      Alert.alert('Erro', 'Erro de conexão com o servidor.');
+    }
   };
 
+  // Renderização do formulário
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>{modoEdicao ? 'Editar Cadastro' : 'Cadastro'}</Text>
@@ -103,6 +139,7 @@ export default function Cadastro() {
   );
 }
 
+// Estilos do componente
 const styles = StyleSheet.create({
   container: { padding: 20, flex: 1, backgroundColor: '#fff' },
   titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 20 },
