@@ -14,6 +14,7 @@ export default function DrawerLayout() {
       <Drawer.Screen name="cadastro" options={{ title: "Cadastros" }} />
       <Drawer.Screen name="imagens" options={{ title: "Imagens/Upload" }} />
       <Drawer.Screen name="logout" options={{ title: "Sair" }} />
+      <Drawer.Screen name="login" options={{ title: "Login" }} />
     </Drawer>
   );
 }

@@ -1,206 +1,177 @@
-import React, { useState } from 'react';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  ScrollView,
+  TextInput,
   TouchableOpacity,
-  Platform,
-  FlatList,
+  StyleSheet,
   Image,
-  Dimensions,
-} from 'react-native';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+  Alert,
+  Platform,
+} from "react-native";
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function CadastroHome() {
-  const navigation = useNavigation();
+// Componente principal de cadastro e edição de usuário
+export default function Cadastro() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
-  const toggleDrawer = () => {
-    navigation.dispatch(DrawerActions.toggleDrawer());
+  // Estados para armazenar os dados do formulário
+  const [nome, setNome] = useState('');
+  const [usuario, setUsuario] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [imagem, setImagem] = useState<string | null>(null);
+
+  // Estados para modo de edição e id do usuário
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [id, setId] = useState<string | null>(null);
+
+  // Ao abrir a tela, verifica se está em modo de edição e preenche os campos
+  useEffect(() => {
+    if (params && params.pessoa) {
+      const pessoa = JSON.parse(params.pessoa as string);
+      setNome(pessoa.nome);
+      setUsuario(pessoa.username);
+      setEmail(pessoa.email);
+      setSenha(pessoa.password);
+      setConfirmarSenha(pessoa.password);
+      setImagem(pessoa.foto || null);
+      setId(pessoa.id);
+      setModoEdicao(true);
+    }
+  }, [params]);
+
+  // Função para escolher imagem da galeria
+  const escolherImagem = async () => {
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!resultado.canceled) {
+      setImagem(resultado.assets[0].uri);
+    }
   };
 
-  const [cadastros, setCadastros] = useState([
-    { id: '1', foto: null, nome: 'Maria Silva', username: 'maria123', email: 'maria@email.com' },
-    { id: '2', foto: null, nome: 'João Souza', username: 'joaosz', email: 'joao@email.com' },
-  ]);
+  // Função para salvar cadastro ou edição de forma segura via backend
+  const handleSalvar = async () => {
+    if (senha !== confirmarSenha) {
+      Alert.alert('Erro', 'As senhas não coincidem.');
+      return;
+    }
 
-  const irParaCadastro = () => {
-    router.push('/cadastro');
+    // Monta o payload conforme o DTO do backend
+    const payload: any = {
+      name: nome,
+      email: email,
+      password: senha,
+      photoUrl: imagem, // O backend espera uma URL, ajuste se for upload
+      role: 'CLIENT', // ou outro papel, se aplicável
+      // birthDate, cpf: adicionar campos se desejar
+    };
+
+    try {
+      let response;
+      if (modoEdicao && id) {
+        // Edição: PATCH /users/:id (requer token)
+        const token = await AsyncStorage.getItem('token');
+        response = await fetch(`http://localhost:8081/users/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Cadastro: POST /users/register
+        response = await fetch('http://localhost:8081/users/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        Alert.alert('Erro', errorData.message || 'Erro ao salvar usuário');
+        return;
+      }
+
+      Alert.alert('Sucesso', modoEdicao ? 'Usuário atualizado!' : 'Cadastro realizado com sucesso!');
+      router.back();
+    } catch (error) {
+      Alert.alert('Erro', 'Erro de conexão com o servidor.');
+    }
   };
 
-  const editarCadastro = (id: string) => {
-    router.push(`/cadastro`); 
-  };
-
-  const excluirCadastro = (id: string) => {
-    setCadastros(prev => prev.filter(item => item.id !== id));
-  };
-
-  const renderItem = ({ item }: any) => (
-    <View style={styles.dataRow}>
-      <View style={[styles.dataCell, styles.fotoCell]}>
-        {item.foto ? (
-          <Image source={{ uri: item.foto }} style={styles.avatar} />
-        ) : (
-          <Ionicons name="person-circle-outline" size={40} color="#888" />
-        )}
-      </View>
-      
-      <View style={[styles.dataCell, styles.idCell]}>
-        <Text style={styles.dataText}>{item.id}</Text>
-      </View>
-      
-      <View style={[styles.dataCell, styles.nomeCell]}>
-        <Text style={styles.dataText}>{item.nome}</Text>
-      </View>
-      
-      <View style={[styles.dataCell, styles.usernameCell]}>
-        <Text style={styles.dataText}>{item.username}</Text>
-      </View>
-      
-      <View style={[styles.dataCell, styles.emailCell]}>
-        <Text style={styles.dataText}>{item.email}</Text>
-      </View>
-      
-      <View style={[styles.dataCell, styles.acoesCell]}>
-        <TouchableOpacity onPress={() => editarCadastro(item.id)} style={styles.actionButton}>
-          <Ionicons name="create-outline" size={20} color="#2196F3" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => excluirCadastro(item.id)} style={styles.actionButton}>
-          <Ionicons name="trash-outline" size={20} color="#f44336" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
+  // Renderização do formulário
   return (
-    <View style={{ flex: 1 }}>
-      {Platform.OS === 'web' && (
-        <TouchableOpacity onPress={toggleDrawer} style={styles.menuButton}>
-          <Ionicons name="menu" size={28} color="#000" />
+    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
+      <Text style={styles.titulo}>{modoEdicao ? 'Editar Cadastro' : 'Cadastro'}</Text>
+
+      <TextInput placeholder="Nome completo" style={styles.input} value={nome} onChangeText={setNome} />
+      <TextInput placeholder="Usuário" style={styles.input} value={usuario} onChangeText={setUsuario} />
+      <TextInput placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" />
+      <TextInput placeholder="Senha" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
+      <TextInput placeholder="Confirmar senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
+
+      <TouchableOpacity style={styles.uploadBtn} onPress={escolherImagem}>
+        <Text style={styles.uploadText}>Selecionar imagem</Text>
+      </TouchableOpacity>
+      {imagem && <Image source={{ uri: imagem }} style={styles.imagem} />}
+
+      <TouchableOpacity style={styles.button} onPress={handleSalvar}>
+        <Text style={styles.buttonText}>{modoEdicao ? 'Salvar Alterações' : 'Cadastrar'}</Text>
+      </TouchableOpacity>
+
+      {!modoEdicao && (
+        <TouchableOpacity onPress={() => router.push('/screens/login')} style={styles.voltar}>
+          <Text style={styles.voltarTexto}>Voltar para login</Text>
         </TouchableOpacity>
       )}
-
-      <ScrollView horizontal={true} style={styles.scrollContainer}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.headerText}>Cadastros de Pessoas</Text>
-          </View>
-
-          {/* Cabeçalho da tabela */}
-          <View style={styles.headerRow}>
-            <View style={[styles.headerCell, styles.fotoCell]}>
-              <Text style={styles.headerText}>Foto</Text>
-            </View>
-            <View style={[styles.headerCell, styles.idCell]}>
-              <Text style={styles.headerText}>ID</Text>
-            </View>
-            <View style={[styles.headerCell, styles.nomeCell]}>
-              <Text style={styles.headerText}>Nome</Text>
-            </View>
-            <View style={[styles.headerCell, styles.usernameCell]}>
-              <Text style={styles.headerText}>Username</Text>
-            </View>
-            <View style={[styles.headerCell, styles.emailCell]}>
-              <Text style={styles.headerText}>Email</Text>
-            </View>
-            <View style={[styles.headerCell, styles.acoesCell]}>
-              <Text style={styles.headerText}>Ações</Text>
-            </View>
-          </View>
-
-          <FlatList
-            data={cadastros}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            style={styles.flatList}
-          />
-        </View>
-      </ScrollView>
-
-      <TouchableOpacity style={styles.addButton} onPress={irParaCadastro}>
-        <Ionicons name="add-circle" size={60} color="#4CAF50" />
-      </TouchableOpacity>
     </View>
   );
 }
 
+// Estilos do componente
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
+  container: { padding: 20, flex: 1, backgroundColor: '#fff' },
+  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 20 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 12,
   },
-  container: {
-    minWidth: Dimensions.get('window').width,
-    paddingTop: 60,
-    paddingHorizontal: 16,
-  },
-  menuButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    zIndex: 10,
-  },
-  header: {
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+  uploadBtn: {
+    backgroundColor: '#ddd',
+    padding: 10,
     alignItems: 'center',
+    borderRadius: 6,
+    marginBottom: 12
   },
-  dataRow: {
-    flexDirection: 'row',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  uploadText: { color: '#333' },
+  imagem: { width: 100, height: 100, borderRadius: 50, alignSelf: 'center', marginBottom: 12 },
+  button: {
+    backgroundColor: '#38a69d',
+    padding: 12,
     alignItems: 'center',
+    borderRadius: 6
   },
-  headerCell: {
-    paddingHorizontal: 8,
-    justifyContent: 'center',
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  voltar: { marginTop: 20, alignItems: 'center' },
+  voltarTexto: { color: '#999' },
+  webContainer: {
+    maxWidth: '33%',
+    marginHorizontal: 'auto',
+    width: '100%',
   },
-  dataCell: {
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-  },
-  dataText: {
-    fontSize: 14,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  actionButton: {
-    paddingHorizontal: 5,
-  },
-  addButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-  },
-  flatList: {
-    marginBottom: 20,
-  },
- 
-  fotoCell: { width: 80 },
-  idCell: { width: 60 },
-  nomeCell: { width: 150 },
-  usernameCell: { width: 120 },
-  emailCell: { width: 200 },
-  acoesCell: { width: 100, flexDirection: 'row', justifyContent: 'space-around' },
 });

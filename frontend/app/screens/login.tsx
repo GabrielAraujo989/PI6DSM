@@ -1,23 +1,38 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   StatusBar,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform,
+  Alert
 } from "react-native";
 import { useRouter } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { login } from "../api/authApi";
 
 import * as Animatable from 'react-native-animatable'
 
 export default function Welcome() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = async () => {
+    try {
+      const token = await login(email, password);
+      await AsyncStorage.setItem('token', token);
+      router.push(`/screens/dashboard?token=${token}`);
+    } catch (error) {
+      console.error("Erro ao logar:", error);
+      Alert.alert('Erro', 'Falha ao realizar login. Verifique suas credenciais.');
+    }
+  };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
       <StatusBar backgroundColor="#38A69D" barStyle="light-content" />
       
       <Animatable.View animation="fadeInLeft" delay={500} style={styles.containerHeader}>
@@ -27,21 +42,32 @@ export default function Welcome() {
       <Animatable.View animation="fadeInUp" delay={500} style={styles.containerform}>
         
       <Text style={styles.title}>E-mail</Text>
-        <TextInput placeholder="Digite um email..." style={styles.input} />
+        <TextInput
+          placeholder="Digite um email..."
+          style={styles.input}
+          onChangeText={setEmail}
+          value={email}
+        />
 
         <Text style={styles.title}>Senha</Text>
-        <TextInput placeholder="Digite sua senha" style={styles.input} />
+        <TextInput
+          placeholder="Digite sua senha"
+          style={styles.input}
+          secureTextEntry
+          onChangeText={setPassword}
+          value={password}
+        />
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push('/screens/dashboard')} 
+          onPress={handleLogin}
         >  
         <Text style={styles.buttonText}>Acessar</Text>              
         </TouchableOpacity> 
 
         <TouchableOpacity
           style={styles.buttonCadastro}
-          onPress={() => router.push('/cadastro')}
+          onPress={() => router.push('/screens/cadastro')}
         >
           <Text style={styles.buttonCad}>Não tem uma conta? Cadastre-se</Text>
         </TouchableOpacity>
@@ -106,5 +132,10 @@ buttonCad: {
   color: '#a1a1a1',
 
 
-}
+},
+webContainer: {
+  maxWidth: '33%',
+  marginHorizontal: 'auto',
+  width: '100%',
+},
 });

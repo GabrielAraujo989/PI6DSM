@@ -3,7 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
-  StatusBar
+  StatusBar,
+  Platform
 } from "react-native";
 import { Button } from '../components/Button';
 import { useRouter } from 'expo-router';
@@ -14,7 +15,7 @@ export default function Welcome() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
       <StatusBar backgroundColor="#38A69D" barStyle="light-content" />
 
       <View style={styles.containerLogo}>
@@ -28,7 +29,7 @@ export default function Welcome() {
          
       <Animatable.View delay={600} animation='fadeInUp' style={styles.containerForm}>
         <Text style={styles.title}>Seja Bem vindo</Text>
-        <Button title="Login" onPress={() => router.push('/login')} />
+        <Button title="Login" onPress={() => router.push('/screens/login')} />
       </Animatable.View>
     </View>
   );
@@ -57,5 +58,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 12,
     marginTop: 28
-  }
+  },
+  webContainer: {
+    maxWidth: '33%',
+    marginHorizontal: 'auto',
+    width: '100%',
+  },
 });

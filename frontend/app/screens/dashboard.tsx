@@ -20,16 +20,18 @@ export default function Welcome() {
       )}
       
       <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Sejam Bem Vindos</Text>
-        </View>
-        
-        <View style={styles.summaryContainer}>
-          <View style={[styles.card, styles.blueCard]}>
-            <Text style={styles.cardText}>28 / 31 Funcionários Identificadas</Text>
+        <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
+          <View style={styles.header}>
+            <Text style={styles.headerText}>Sejam Bem Vindos</Text>
           </View>
-          <View style={[styles.card, styles.blueCard]}>
-            <Text style={styles.cardText}>1 / 20 Visitantes Identificados</Text>
+          
+          <View style={styles.summaryContainer}>
+            <View style={[styles.card, styles.blueCard]}>
+              <Text style={styles.cardText}>28 / 31 Funcionários Identificadas</Text>
+            </View>
+            <View style={[styles.card, styles.blueCard]}>
+              <Text style={styles.cardText}>1 / 20 Visitantes Identificados</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -86,5 +88,10 @@ const styles = StyleSheet.create({
   },
   blueCard: {
     backgroundColor: '#3498db',
+  },
+  webContainer: {
+    maxWidth: '33%',
+    marginHorizontal: 'auto',
+    width: '100%',
   },
 });
