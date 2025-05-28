@@ -22,17 +22,13 @@ async function bootstrap() {
     app.use(compression());
   }
 
-  // CORS
   app.enableCors({
-    origin: [
-    'https://pi-6dsm-pi-6dsm-service.26nnqp.easypanel.host',
-    'exp://127.0.0.1:19000',
-    'http://localhost:8081',
-    'http://localhost:19006',
-    '*'
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: (origin, callback) => {
+      callback(null, true); // permite todas as origens
+    },
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization',
   });
 
   // Pipes globais
