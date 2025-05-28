@@ -24,9 +24,13 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: isProduction 
-      ? configService.get<string>('ALLOWED_ORIGINS', '*').split(',')
-      : '*',
+    origin: [
+    'https://pi-6dsm-pi-6dsm-service.26nnqp.easypanel.host',
+    'exp://127.0.0.1:19000',
+    'http://localhost:8081',
+    'http://localhost:19006',
+    '*'
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
