@@ -7,45 +7,67 @@ import {
   StyleSheet,
   Image,
   Alert,
-  Platform,
 } from "react-native";
+import Header from '../../components/Header';
 import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Componente principal de cadastro e edição de usuário
 export default function Cadastro() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  // Estados para armazenar os dados do formulário
   const [nome, setNome] = useState('');
-  const [usuario, setUsuario] = useState('');
+  const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
+  const [emailValido, setEmailValido] = useState(true);
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
   const [imagem, setImagem] = useState<string | null>(null);
 
-  // Estados para modo de edição e id do usuário
   const [modoEdicao, setModoEdicao] = useState(false);
   const [id, setId] = useState<string | null>(null);
 
-  // Ao abrir a tela, verifica se está em modo de edição e preenche os campos
+  const [perfil, setPerfil] = useState('padrao');
+
   useEffect(() => {
     if (params && params.pessoa) {
       const pessoa = JSON.parse(params.pessoa as string);
       setNome(pessoa.nome);
-      setUsuario(pessoa.username);
+      setCpf(pessoa.cpf);
       setEmail(pessoa.email);
       setSenha(pessoa.password);
       setConfirmarSenha(pessoa.password);
+      setDataNascimento(pessoa.dataNascimento);
       setImagem(pessoa.foto || null);
       setId(pessoa.id);
       setModoEdicao(true);
     }
   }, [params]);
 
-  // Função para escolher imagem da galeria
+  const aplicarMascaraCPF = (cpf: string): string => {
+    cpf = cpf.replace(/\D/g, '').slice(0, 11);
+    return cpf
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+  const aplicarMascaraData = (data: string): string => {
+  data = data.replace(/\D/g, '').slice(0, 8); // Só números, até 8 dígitos
+  if (data.length >= 5) {
+    return data.replace(/(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3');
+  } else if (data.length >= 3) {
+    return data.replace(/(\d{2})(\d{1,2})/, '$1/$2');
+  } else {
+    return data;
+  }
+};
+const validarEmail = (email: string): boolean => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+};
+
   const escolherImagem = async () => {
     const resultado = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -59,96 +81,112 @@ export default function Cadastro() {
     }
   };
 
-  // Função para salvar cadastro ou edição de forma segura via backend
-  const handleSalvar = async () => {
+  const handleSalvar = () => {
     if (senha !== confirmarSenha) {
       Alert.alert('Erro', 'As senhas não coincidem.');
       return;
     }
 
-    // Monta o payload conforme o DTO do backend
-    const payload: any = {
-      name: nome,
-      email: email,
+    const novoCadastro = {
+      id: id || Date.now().toString(),
+      nome,
+      cpf,
+      email,
       password: senha,
-      photoUrl: imagem, // O backend espera uma URL, ajuste se for upload
-      role: 'CLIENT', // ou outro papel, se aplicável
-      // birthDate, cpf: adicionar campos se desejar
+      dataNascimento,
+      foto: imagem,
+      perfil,
     };
 
-    try {
-      let response;
-      if (modoEdicao && id) {
-        // Edição: PATCH /users/:id (requer token)
-        const token = await AsyncStorage.getItem('token');
-        response = await fetch(`http://localhost:8081/users/${id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        // Cadastro: POST /users/register
-        response = await fetch('http://localhost:8081/users/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        Alert.alert('Erro', errorData.message || 'Erro ao salvar usuário');
-        return;
-      }
-
-      Alert.alert('Sucesso', modoEdicao ? 'Usuário atualizado!' : 'Cadastro realizado com sucesso!');
-      router.back();
-    } catch (error) {
-      Alert.alert('Erro', 'Erro de conexão com o servidor.');
+    if (params.salvarCadastro) {
+      const callback = eval(params.salvarCadastro as string);
+      callback(novoCadastro);
     }
+    router.back();
   };
 
-  // Renderização do formulário
   return (
-    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
-      <Text style={styles.titulo}>{modoEdicao ? 'Editar Cadastro' : 'Cadastro'}</Text>
+    <View style={styles.container}>
+      <Header title="Cadastro" />
+      <View style={styles.textInput}>
+        <TextInput placeholder="Nome completo" style={styles.input} value={nome} onChangeText={setNome} />
+        <TextInput
+          placeholder="CPF"
+          style={styles.input}
+          value={cpf}
+          onChangeText={(text) => setCpf(aplicarMascaraCPF(text))}
+          keyboardType="numeric"
+        />
+        <TextInput
+          placeholder="Data de nascimento (dd/mm/aaaa)"
+          style={styles.input}
+          value={dataNascimento}
+          onChangeText={(text) => setDataNascimento(aplicarMascaraData(text))}
+          keyboardType="numeric"
+        />
+        <TextInput
+          placeholder="Email"
+          style={[styles.input, !emailValido && { borderColor: 'red' }]}
+          value={email}
+          onChangeText={(text) => {
+            setEmail(text);
+            setEmailValido(validarEmail(text));
+          }}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        {!emailValido && <Text style={{ color: 'red' }}>E-mail inválido</Text>}
+        <TextInput placeholder="Senha" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
+        <TextInput placeholder="Confirmar senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
 
-      <TextInput placeholder="Nome completo" style={styles.input} value={nome} onChangeText={setNome} />
-      <TextInput placeholder="Usuário" style={styles.input} value={usuario} onChangeText={setUsuario} />
-      <TextInput placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" />
-      <TextInput placeholder="Senha" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
-      <TextInput placeholder="Confirmar senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={perfil}
+            onValueChange={(itemValue) => setPerfil(itemValue)}
+            style={styles.picker}
+          >
+            <Picker.Item label="Padrão" value="padrao" />
+            <Picker.Item label="Administrador" value="admin" />
+          </Picker>
+        </View>
 
-      <TouchableOpacity style={styles.uploadBtn} onPress={escolherImagem}>
-        <Text style={styles.uploadText}>Selecionar imagem</Text>
-      </TouchableOpacity>
-      {imagem && <Image source={{ uri: imagem }} style={styles.imagem} />}
-
-      <TouchableOpacity style={styles.button} onPress={handleSalvar}>
-        <Text style={styles.buttonText}>{modoEdicao ? 'Salvar Alterações' : 'Cadastrar'}</Text>
-      </TouchableOpacity>
-
-      {!modoEdicao && (
-        <TouchableOpacity onPress={() => router.push('/screens/login')} style={styles.voltar}>
-          <Text style={styles.voltarTexto}>Voltar para login</Text>
+        <TouchableOpacity style={styles.uploadBtn} onPress={escolherImagem}>
+          <Text style={styles.uploadText}>Selecionar imagem</Text>
         </TouchableOpacity>
-      )}
+        {imagem && <Image source={{ uri: imagem }} style={styles.imagem} />}
+
+        <TouchableOpacity style={styles.button} onPress={handleSalvar}>
+          <Text style={styles.buttonText}>{modoEdicao ? 'Salvar Alterações' : 'Cadastrar'}</Text>
+        </TouchableOpacity>
+
+        {!modoEdicao && (
+          <TouchableOpacity onPress={() => router.push('../../screens/cadastro')} style={styles.voltar}>
+            <Text style={styles.voltarTexto}>Cancelar</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
-// Estilos do componente
 const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1, backgroundColor: '#fff' },
-  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 20 },
+  textInput: {
+    marginTop: 20,
+    justifyContent: 'center',
+    alignSelf: 'center',
+    width: '80%',
+    alignItems: 'center',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   input: {
-    borderWidth: 1,
+    width: '80%',
+    borderWidth: 2,
     borderColor: '#ccc',
     borderRadius: 6,
-    padding: 10,
+    padding: 6,
     marginBottom: 12,
   },
   uploadBtn: {
@@ -158,20 +196,44 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 12
   },
-  uploadText: { color: '#333' },
-  imagem: { width: 100, height: 100, borderRadius: 50, alignSelf: 'center', marginBottom: 12 },
+  uploadText: {
+    color: '#333'
+  },
+  imagem: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignSelf: 'center',
+    marginBottom: 12
+  },
   button: {
-    backgroundColor: '#38a69d',
+    backgroundColor: '#ADD8E6',
     padding: 12,
     alignItems: 'center',
     borderRadius: 6
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  voltar: { marginTop: 20, alignItems: 'center' },
-  voltarTexto: { color: '#999' },
-  webContainer: {
-    maxWidth: '33%',
-    marginHorizontal: 'auto',
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  voltar: {
+    marginTop: 20,
+    alignItems: 'center'
+  },
+  voltarTexto: {
+    color: '#999'
+  },
+  pickerContainer: {
+    width: '80%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  picker: {
     width: '100%',
+    height: 40,
   },
 });

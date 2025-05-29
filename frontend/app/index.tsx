@@ -4,45 +4,49 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  Platform
+  ImageBackground
 } from "react-native";
+import "expo-router/entry";
 import { Button } from '../components/Button';
 import { useRouter } from 'expo-router';
-
-import * as Animatable from 'react-native-animatable'
+import * as Animatable from 'react-native-animatable';
 
 export default function Welcome() {
   const router = useRouter();
 
   return (
-    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
-      <StatusBar backgroundColor="#38A69D" barStyle="light-content" />
+    <ImageBackground
+      source={require('../assets/images/fundo.png')} 
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <StatusBar backgroundColor="#00000000" barStyle="light-content" translucent />
 
       <View style={styles.containerLogo}>
         <Animatable.Image
           animation="flipInY"
-          source={require('../assets/images/logo.png')}
+          source={require('../assets/images/fundo2.png')}
           style={{ width: '100%' }}
           resizeMode="contain"
         />
-      </View>
+        </View>
          
       <Animatable.View delay={600} animation='fadeInUp' style={styles.containerForm}>
         <Text style={styles.title}>Seja Bem vindo</Text>
         <Button title="Login" onPress={() => router.push('/screens/login')} />
       </Animatable.View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#38a69d'
-  },
+container: {
+  flex: 1,
+  width: '100%',
+  height: '100%',
+},
   containerLogo: {
     flex:2,
-    backgroundColor: '#38a69d',
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -58,10 +62,5 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 12,
     marginTop: 28
-  },
-  webContainer: {
-    maxWidth: '33%',
-    marginHorizontal: 'auto',
-    width: '100%',
-  },
+  }
 });

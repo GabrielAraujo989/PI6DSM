@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -6,100 +6,98 @@ import {
   StatusBar,
   TextInput,
   TouchableOpacity,
-  Platform,
-  Alert
+  ImageBackground,
 } from "react-native";
 import { useRouter } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { login } from "../api/authApi";
+
 
 import * as Animatable from 'react-native-animatable'
 
 export default function Welcome() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleLogin = async () => {
-    try {
-      const token = await login(email, password);
-      await AsyncStorage.setItem('token', token);
-      router.push(`/screens/dashboard?token=${token}`);
-    } catch (error) {
-      console.error("Erro ao logar:", error);
-      Alert.alert('Erro', 'Falha ao realizar login. Verifique suas credenciais.');
-    }
-  };
 
   return (
-    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
-      <StatusBar backgroundColor="#38A69D" barStyle="light-content" />
+    <ImageBackground
+        source={require('../../assets/images/fundo.png')} 
+        style={styles.container}
+        resizeMode="cover"
+      >      
+
+      <View style={styles.containerLogo}>
+        <Animatable.Image
+          animation="flipInY"
+          source={require('../../assets/images/fundo2.png')}
+          style={{ width: '100%' }}
+            resizeMode="contain"
+        />
+      </View>
+
+      <View style={styles.containerLogin}>    
+    
+        <Animatable.View animation="fadeInLeft" delay={500} style={styles.containerHeader}>
+          <Text style={styles.message}>Faça login</Text>
+        </Animatable.View>
+
       
-      <Animatable.View animation="fadeInLeft" delay={500} style={styles.containerHeader}>
-        <Text style={styles.message}>Faça login</Text>
-      </Animatable.View>
+        <Animatable.View animation="fadeInUp" delay={600} style={styles.containerForm}>
+          <Text style={styles.title}>E-mail</Text>
+          <TextInput placeholder="Digite um email..." style={styles.input} />
 
-      <Animatable.View animation="fadeInUp" delay={500} style={styles.containerform}>
-        
-      <Text style={styles.title}>E-mail</Text>
-        <TextInput
-          placeholder="Digite um email..."
-          style={styles.input}
-          onChangeText={setEmail}
-          value={email}
-        />
+          <Text style={styles.title}>Senha</Text>
+        <TextInput placeholder="Digite sua senha" style={styles.input} secureTextEntry />
 
-        <Text style={styles.title}>Senha</Text>
-        <TextInput
-          placeholder="Digite sua senha"
-          style={styles.input}
-          secureTextEntry
-          onChangeText={setPassword}
-          value={password}
-        />
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-        >  
-        <Text style={styles.buttonText}>Acessar</Text>              
-        </TouchableOpacity> 
-
-        <TouchableOpacity
-          style={styles.buttonCadastro}
-          onPress={() => router.push('/screens/cadastro')}
+          <TouchableOpacity
+            style={styles.button}
+          onPress={() => router.push('/screens/dashboard')}
         >
-          <Text style={styles.buttonCad}>Não tem uma conta? Cadastre-se</Text>
-        </TouchableOpacity>
-
-      </Animatable.View>     
-
+            <Text style={styles.buttonText}>Acessar</Text>
+          </TouchableOpacity>
+        </Animatable.View>
+      </View>
+    </ImageBackground>
       
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#38a69d',
+container: {
+  flex: 1,
+  width: '100%',
+  height: '100%',
+},
+  containerLogo: {
+    flex:1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  containerHeader:{
-    marginTop: '14%',
-    marginBottom: '8%',
-    paddingStart: '5%',
-  },
+containerLogin: {
+  flex: 2,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 20, 
+},
+
+containerHeader: {
+  marginBottom: 20,
+  alignSelf: 'flex-start',
+},
   message:{
     fontSize: 28,
     fontWeight: 'bold',
     color: '#fff'
   },
-  containerform:{
-    backgroundColor: '#fff',
-    flex:1,
-    paddingStart: '5%',
-    paddingEnd: '5%',
-  },
+containerForm: {
+  backgroundColor: '#fff',
+  width: '100%',
+  borderRadius: 12,
+  padding: 20,
+  elevation: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.25,
+  shadowRadius: 3.84,
+},
   title: {
     fontSize: 20,
     marginTop: 28,
@@ -111,7 +109,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
 },
 button: {
-  backgroundColor: '#022601',
+  backgroundColor: '#C0C0C0',
   width: '100%',
   paddingVertical: 5,
   marginTop: 20,
@@ -132,10 +130,5 @@ buttonCad: {
   color: '#a1a1a1',
 
 
-},
-webContainer: {
-  maxWidth: '33%',
-  marginHorizontal: 'auto',
-  width: '100%',
-},
+}
 });
