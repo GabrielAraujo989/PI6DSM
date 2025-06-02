@@ -16,8 +16,7 @@ async function bootstrap() {
   const port = configService.get<number>('API_PORT') || 8082;
   const isProduction = configService.get<string>('NODE_ENV') === 'production';
   const apiUrl = configService.get<string>('API_URL') || 'http://localhost';
-  const mobileAppUrl = configService.get<string>('MOBILE_APP_URL') || 'http://localhost';
-  const webAppUrl = configService.get<string>('WEB_APP_URL') || 'http://localhost';
+  const webAppUrl = configService.get<string>('WEB_APP_URL') || 'http://localhost:8082';
 
   // Configurações de segurança
   if (isProduction) {
@@ -25,51 +24,34 @@ async function bootstrap() {
     app.use(compression());
   }
 
-  // Configuração de CORS para React Native (mobile e web)
+  // Configuração simplificada de CORS
   app.enableCors({
     origin: (origin, callback) => {
-      // Permite solicitações sem origem (como apps mobile ou curl)
+      // Permite solicitações sem origem (mobile, curl, etc)
       if (!origin) return callback(null, true);
       
-      // Lista de origens permitidas
+      // Permite todas as origens em desenvolvimento
+      if (!isProduction) return callback(null, true);
+
+      // Lista de origens permitidas em produção
       const allowedOrigins = [
-        mobileAppUrl,
         webAppUrl,
         apiUrl,
-        // Adicione outros domínios/URLs conforme necessário
+        // Adicione outras origens de produção aqui
       ];
 
-      // Verifica se a origem está na lista de permitidas
+      // Verifica origem permitida
       if (allowedOrigins.some(allowedOrigin => origin.startsWith(allowedOrigin))) {
         return callback(null, true);
       }
 
-      // Rejeita outras origens em produção
-      if (isProduction) {
-        logger.warn(`CORS bloqueado para origem: ${origin}`);
-        return callback(new Error('Not allowed by CORS'), false);
-      }
-
-      // Permite qualquer origem em desenvolvimento
-      return callback(null, true);
+      // Bloqueia origens não permitidas em produção
+      logger.warn(`CORS bloqueado para origem: ${origin}`);
+      callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-      'Origin',
-      'Access-Control-Request-Method',
-      'Access-Control-Request-Headers',
-    ],
-    exposedHeaders: [
-      'Content-Length',
-      'Authorization',
-      'Access-Control-Allow-Origin',
-    ],
-    maxAge: 86400, // 24 horas
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Pipes globais
@@ -85,6 +67,6 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Application is running on: ${apiUrl}:${port}`);
   logger.log(`Environment: ${configService.get<string>('NODE_ENV')}`);
-  logger.log(`Allowed origins: ${mobileAppUrl}, ${webAppUrl}, ${apiUrl}`);
+  logger.log(`Allowed web origin: ${webAppUrl}`);
 }
 bootstrap();
