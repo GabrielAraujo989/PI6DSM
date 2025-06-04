@@ -13,6 +13,19 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
         transform: true,
     }));
+    app.enableCors({
+        origin: (origin, callback) => {
+            if (!origin || origin.startsWith('http://localhost:8082')) {
+                callback(null, true);
+            }
+            else {
+                callback(null, true);
+            }
+        },
+        credentials: true,
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        allowedHeaders: ['Content-Type', 'Authorization'],
+    });
     await app.listen(port);
     console.log(`Application is running on: http://localhost:${port}`);
 }

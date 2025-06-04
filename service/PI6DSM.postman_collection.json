@@ -680,6 +680,76 @@
 				}
 			],
 			"description": "Fluxo completo de teste para verificar todas as operações CRUD"
+		},
+		{
+			"name": "Stream",
+			"item": [
+				{
+					"name": "Iniciar Câmeras IP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cameraIps\": [\"http://10.11.51.151:8080/video\", \"http://10.11.51.152:8080/video\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/stream/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"stream",
+								"start"
+							]
+						},
+						"description": "Inicia o stream de múltiplas câmeras IP via DetectFace. Retorna as rotas de vídeo."
+					},
+					"response": []
+				},
+				{
+					"name": "Scan de Rede",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"network\": \"10.11.51.0/24\",\n  \"port\": 80\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/stream/scan",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"stream",
+								"scan"
+							]
+						},
+						"description": "Faz scan de rede para encontrar câmeras IP ativas."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para controle de stream de câmeras IP"
 		}
 	],
 	"event": [
@@ -714,4 +784,4 @@
 			"type": "string"
 		}
 	]
-} 
+}

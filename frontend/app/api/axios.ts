@@ -1,21 +1,19 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-
-let token: string | null = null;
-
-// Load token into memory during app initialization
-AsyncStorage.getItem('token').then((storedToken) => {
-  token = storedToken;
-});
 
 const api = axios.create({
   baseURL: Constants.expoConfig?.extra?.BASE_URL,
 });
 
-// Add the token to headers if it exists
+// Adiciona o token apenas em runtime, compatível com web e mobile
 api.interceptors.request.use(
+  // Não usar async aqui! Use um interceptor síncrono para axios
   (config) => {
+    let token = null;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      token = window.localStorage.getItem('token');
+    }
+    // Para mobile, o token deve ser adicionado manualmente nas chamadas (ou use contexto)
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

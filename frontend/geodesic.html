@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Geodesic Sphere with Animated Points</title>
+  <style>
+    body {
+      margin: 0;
+      background: white;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script>
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0xffffff, 15, 40);
+
+    const camera = new THREE.PerspectiveCamera(
+      75, window.innerWidth / window.innerHeight, 0.1, 100
+    );
+    camera.position.z = 20;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xffffff, 1);
+    document.body.appendChild(renderer.domElement);
+
+    // Geometria base
+    const geometry = new THREE.IcosahedronGeometry(10, 2);
+
+    // Malha translúcida
+    const meshMaterial = new THREE.MeshBasicMaterial({
+      color: 0xcccccc,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide
+    });
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
+    scene.add(mesh);
+
+    // Wireframe
+    const wireframe = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geometry),
+      new THREE.LineBasicMaterial({ color: 0x444444 })
+    );
+    scene.add(wireframe);
+
+    // Pontos nas interseções com opacidade variável
+    const pointsMaterial = new THREE.PointsMaterial({
+      size: 0.3,
+      transparent: true,
+      opacity: 1.0,
+      color: 0x000000
+    });
+    const points = new THREE.Points(geometry, pointsMaterial);
+    scene.add(points);
+
+    const light = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(light);
+
+    // Animação
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const time = Date.now() * 0.001;
+      const rotX = 0.001 + 0.001 * Math.sin(time);
+      const rotY = 0.0015 + 0.001 * Math.cos(time);
+
+      mesh.rotation.x += rotX;
+      mesh.rotation.y += rotY;
+
+      wireframe.rotation.copy(mesh.rotation);
+      points.rotation.copy(mesh.rotation);
+
+      // Variação de opacidade dos pontos entre 0.75 e 1.0
+      const pulse = 0.875 + 0.125 * Math.sin(time * 2);
+      points.material.opacity = pulse;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+  </script>
+</body>
+</html>

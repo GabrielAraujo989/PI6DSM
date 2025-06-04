@@ -15,33 +15,22 @@ export default function Monitoramento() {
     <View style={{ flex: 1 }}>
       <Header title="Monitoramento" />
 
-      {/* Área fixa da seleção de câmeras */}
-      <View style={styles.selectionFixedContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <CameraWrapper />
-      </View>      
 
-      {/* Resumo embaixo (ou coloque onde desejar) */}
-      <View style={styles.summaryContainer}>
-        <View style={[styles.card, styles.blueCard]}>
-          <Text style={styles.cardText}>28 Quantidade de Pessoa Identificadas</Text>
+        <View style={styles.summaryContainer}>
+          <View style={[styles.card, styles.blueCard]}>
+            <Text style={styles.cardText}>28 Quantidade de Pessoa Identificadas</Text>
+          </View>          
         </View>
-        <View style={[styles.card, styles.blueCard]}>
-          <Text style={styles.cardText}>1 Total de pessoas ao vivo na tela</Text>
-        </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  selectionFixedContainer: {
-    position: 'sticky',  // para web
-    top: 0,
-    zIndex: 100,
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+  scrollContainer: {
+    paddingBottom: 40,
   },
   summaryContainer: {
     flexDirection: 'row',

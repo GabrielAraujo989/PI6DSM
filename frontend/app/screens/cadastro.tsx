@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   Alert,
+  ScrollView
 } from "react-native";
 import Header from '../../components/Header';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,16 +21,15 @@ export default function Cadastro() {
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
-  const [emailValido, setEmailValido] = useState(true);
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [imagem, setImagem] = useState<string | null>(null);
-
-  const [modoEdicao, setModoEdicao] = useState(false);
-  const [id, setId] = useState<string | null>(null);
-
   const [perfil, setPerfil] = useState('padrao');
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [id, setId] = useState<string | null>(null);
+  const [modoEdicao, setModoEdicao] = useState(false);
 
   useEffect(() => {
     if (params && params.pessoa) {
@@ -67,6 +67,68 @@ const validarEmail = (email: string): boolean => {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regex.test(email);
 };
+const validarCPF = (cpf: string): boolean => {
+    return cpf.replace(/\D/g, '').length === 11;
+};
+const validarData = (data: string): boolean => {
+    return /^\d{2}\/\d{2}\/\d{4}$/.test(data);
+};
+
+  const handleRegister = async () => {
+    setError("");
+    if (!nome || !cpf || !email || !senha || !confirmarSenha || !dataNascimento) {
+      setError("Preencha todos os campos obrigatórios.");
+      return;
+    }
+    if (!validarEmail(email)) {
+      setError("E-mail inválido.");
+      return;
+    }
+    if (!validarCPF(cpf)) {
+      setError("CPF inválido.");
+      return;
+    }
+    if (!validarData(dataNascimento)) {
+      setError("Data de nascimento inválida.");
+      return;
+    }
+    if (senha.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (senha !== confirmarSenha) {
+      setError("As senhas não coincidem.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8081/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: nome,
+          cpf: cpf.replace(/\D/g, ''),
+          email,
+          password: senha,
+          birthDate: dataNascimento.split('/').reverse().join('-'),
+          role: perfil === 'admin' ? 'ADMIN' : 'CLIENT',
+          photoUrl: imagem,
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.message || 'Erro ao cadastrar usuário.');
+        setLoading(false);
+        return;
+      }
+      Alert.alert('Sucesso', 'Cadastro realizado!');
+      router.push('/screens/login');
+    } catch (err) {
+      setError('Erro de conexão com o servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const escolherImagem = async () => {
     const resultado = await ImagePicker.launchImageLibraryAsync({
@@ -106,7 +168,7 @@ const validarEmail = (email: string): boolean => {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Header title="Cadastro" />
       <View style={styles.textInput}>
         <TextInput placeholder="Nome completo" style={styles.input} value={nome} onChangeText={setNome} />
@@ -126,16 +188,12 @@ const validarEmail = (email: string): boolean => {
         />
         <TextInput
           placeholder="Email"
-          style={[styles.input, !emailValido && { borderColor: 'red' }]}
+          style={styles.input}
           value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setEmailValido(validarEmail(text));
-          }}
+          onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        {!emailValido && <Text style={{ color: 'red' }}>E-mail inválido</Text>}
         <TextInput placeholder="Senha" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
         <TextInput placeholder="Confirmar senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
 
@@ -154,22 +212,32 @@ const validarEmail = (email: string): boolean => {
           <Text style={styles.uploadText}>Selecionar imagem</Text>
         </TouchableOpacity>
         {imagem && <Image source={{ uri: imagem }} style={styles.imagem} />}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.button} onPress={handleSalvar}>
-          <Text style={styles.buttonText}>{modoEdicao ? 'Salvar Alterações' : 'Cadastrar'}</Text>
+        <TouchableOpacity style={[styles.button, loading && { opacity: 0.7 }]} onPress={handleRegister} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? 'Cadastrando...' : 'Cadastrar'}</Text>
         </TouchableOpacity>
-
-        {!modoEdicao && (
-          <TouchableOpacity onPress={() => router.push('../../screens/cadastro')} style={styles.voltar}>
-            <Text style={styles.voltarTexto}>Cancelar</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.buttonCadastro} onPress={() => router.push('/screens/login')}>
+          <Text style={styles.buttonCad}>Já tem uma conta? Faça login</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  titulo: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
   textInput: {
     marginTop: 20,
     justifyContent: 'center',
@@ -177,16 +245,12 @@ const styles = StyleSheet.create({
     width: '80%',
     alignItems: 'center',
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
   input: {
-    width: '80%',
-    borderWidth: 2,
+    width: '100%',
+    borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
-    padding: 6,
+    padding: 10,
     marginBottom: 12,
   },
   uploadBtn: {
@@ -196,34 +260,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 12
   },
-  uploadText: {
-    color: '#333'
-  },
-  imagem: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignSelf: 'center',
-    marginBottom: 12
-  },
+  uploadText: { color: '#333' },
+  imagem: { width: 100, height: 100, borderRadius: 50, alignSelf: 'center', marginBottom: 12 },
   button: {
-    backgroundColor: '#ADD8E6',
+    backgroundColor: '#38a69d',
     padding: 12,
     alignItems: 'center',
-    borderRadius: 6
+    borderRadius: 6,
+    width: '100%'
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  voltar: {
-    marginTop: 20,
-    alignItems: 'center'
-  },
-  voltarTexto: {
-    color: '#999'
-  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  buttonCadastro: { marginTop: 20, alignItems: 'center' },
+  buttonCad: { color: '#38a69d', fontWeight: 'bold' },
+  error: { color: 'red', marginBottom: 8, textAlign: 'center' },
   pickerContainer: {
     width: '80%',
     borderWidth: 1,

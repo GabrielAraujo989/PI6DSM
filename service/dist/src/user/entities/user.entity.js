@@ -33,7 +33,7 @@ __decorate([
     __metadata("design:type", Date)
 ], User.prototype, "birthDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 11, unique: true }),
+    (0, typeorm_1.Column)({ length: 100, unique: true }),
     __metadata("design:type", String)
 ], User.prototype, "cpf", void 0);
 __decorate([
