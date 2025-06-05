@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { User } from './user/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
+import { StreamComponentModule } from './streamComponent/stream-component.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CommonModule } from './common/common.module';
     UserModule,
     AuthModule,
     CommonModule,
+    StreamComponentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

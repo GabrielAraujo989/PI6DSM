@@ -1,5 +1,5 @@
 # server.py - API para detecção facial em múltiplas câmeras
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request, HTTPException, Depends
 from pydantic import BaseModel
 import threading
 import cv2
@@ -7,6 +7,10 @@ from ultralytics import YOLO
 import torch
 import time
 import numpy as np
+import jwt
+from typing import List
+from dotenv import load_dotenv
+import os
 
 app = FastAPI()
 
@@ -63,10 +67,18 @@ class CameraRequest(BaseModel):
     conf: float = 0.5
 
 @app.post("/start_camera/")
-def start_camera(req: CameraRequest):
+def start_camera(req: CameraRequest, request: Request = Depends(verify_jwt)):
     t = threading.Thread(target=process_camera, args=(req.url, req.conf), daemon=True)
     t.start()
-    return {"status": "started", "camera": req.url}
+    # Gera um índice para a câmera recém-adicionada
+    with frames_lock:
+        keys = list(frames_cameras.keys())
+        idx = keys.index(req.url) if req.url in keys else len(keys)
+    return {
+        "status": "started",
+        "camera": req.url,
+        "stream_url": f"/stream/video/{idx}"
+    }
 
 @app.get("/")
 def root():
@@ -76,3 +88,53 @@ def root():
 def start_monitoramento():
     t = threading.Thread(target=mostrar_todas_cameras, daemon=True)
     t.start()
+
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY", "SUA_SECRET_KEY")
+
+# Função para verificar JWT
+
+def verify_jwt(request: Request):
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token ausente")
+    token = auth.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+class StartCamerasRequest(BaseModel):
+    camera_ips: List[str]
+
+@app.post("/start_cameras/")
+def start_cameras(req: StartCamerasRequest, request: Request = Depends(verify_jwt)):
+    streams = []
+    for idx, ip in enumerate(req.camera_ips):
+        t = threading.Thread(target=process_camera, args=(ip, 0.5), daemon=True)
+        t.start()
+        streams.append(f"/stream/video/{idx}")
+    return {"streams": streams}
+
+from fastapi.responses import StreamingResponse
+
+@app.get("/stream/video/{idx}")
+def video_stream(idx: int, request: Request = Depends(verify_jwt)):
+    # Aqui você pode mapear o idx para o IP real (exemplo simplificado)
+    # Para produção, use um dicionário global para mapear idx -> IP
+    ips = list(frames_cameras.keys())
+    if idx >= len(ips):
+        raise HTTPException(status_code=404, detail="Câmera não encontrada")
+    ip = ips[idx]
+    def gen():
+        while True:
+            with frames_lock:
+                frame = frames_cameras.get(ip)
+            if frame is None:
+                break
+            _, buffer = cv2.imencode('.jpg', frame)
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            time.sleep(0.1)
+    return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")

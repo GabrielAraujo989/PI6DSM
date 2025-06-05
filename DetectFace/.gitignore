@@ -35,3 +35,7 @@ __pycache__/
 *.npz
 *.npy
 *.ipynb_checkpoints/
+yolo11s.pt
+exemplo1.mp4
+exemplo2.mp4
+# Docker

@@ -1,0 +1,19 @@
+{
+  "name": "onvif-camera-streamer",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start-onvif": "node server.js",
+    "start-stream": "node stream-proxy.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-onvif": "^0.1.7"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

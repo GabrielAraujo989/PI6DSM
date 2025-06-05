@@ -16,6 +16,20 @@ async function bootstrap() {
     }),
   );
 
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Permite localhost:8082 para web e qualquer origem para mobile (Expo Go, emulador, etc)
+      if (!origin || origin.startsWith('http://localhost:8082')) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permite qualquer origem (Android/iOS Expo Go)
+      }
+    },
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
 }

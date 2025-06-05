@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+*.log
+*.mp4
+*.avi
+*.jpg
+*.jpeg
+*.png
+*.onnx
+*.pt
+.DS_Store
+.env
+.idea/
+.vscode/
+*.ipynb_checkpoints/
+# Não subir modelos grandes nem arquivos de vídeo/imagem de teste
+yolo11s.pt
+exemplo1.mp4
+exemplo2.mp4
