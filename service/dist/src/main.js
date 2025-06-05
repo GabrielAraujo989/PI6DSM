@@ -14,14 +14,7 @@ async function bootstrap() {
         transform: true,
     }));
     app.enableCors({
-        origin: (origin, callback) => {
-            if (!origin || origin.startsWith('http://localhost:8082')) {
-                callback(null, true);
-            }
-            else {
-                callback(null, true);
-            }
-        },
+        origin: '*',
         credentials: true,
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         allowedHeaders: ['Content-Type', 'Authorization'],
