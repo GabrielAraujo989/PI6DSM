@@ -8,6 +8,9 @@ import { User } from './user/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { StreamComponentModule } from './streamComponent/stream-component.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+
 
 @Module({
   imports: [
@@ -16,11 +19,11 @@ import { StreamComponentModule } from './streamComponent/stream-component.module
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST || 'postgres',
+      host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'gabriel05101994',
-      database: process.env.DB_DATABASE || 'registration_data',
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
       entities: [User],
       synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV !== 'production',
@@ -34,6 +37,14 @@ import { StreamComponentModule } from './streamComponent/stream-component.module
     AuthModule,
     CommonModule,
     StreamComponentModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..'),
+      serveRoot: '/',
+      exclude: ['/api*', '/auth*', '/users*', '/stream*'],
+      serveStaticOptions: {
+        index: 'geodesic.html',
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
