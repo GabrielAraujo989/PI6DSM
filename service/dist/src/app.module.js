@@ -17,6 +17,8 @@ const user_entity_1 = require("./user/entities/user.entity");
 const auth_module_1 = require("./auth/auth.module");
 const common_module_1 = require("./common/common.module");
 const stream_component_module_1 = require("./streamComponent/stream-component.module");
+const serve_static_1 = require("@nestjs/serve-static");
+const path_1 = require("path");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -28,11 +30,11 @@ exports.AppModule = AppModule = __decorate([
             }),
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'postgres',
-                host: process.env.DB_HOST || 'postgres',
+                host: process.env.DB_HOST,
                 port: parseInt(process.env.DB_PORT || '5432', 10),
-                username: process.env.DB_USERNAME || 'postgres',
-                password: process.env.DB_PASSWORD || 'gabriel05101994',
-                database: process.env.DB_DATABASE || 'registration_data',
+                username: process.env.DB_USERNAME,
+                password: process.env.DB_PASSWORD,
+                database: process.env.DB_DATABASE,
                 entities: [user_entity_1.User],
                 synchronize: process.env.NODE_ENV !== 'production',
                 logging: process.env.NODE_ENV !== 'production',
@@ -46,6 +48,14 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             common_module_1.CommonModule,
             stream_component_module_1.StreamComponentModule,
+            serve_static_1.ServeStaticModule.forRoot({
+                rootPath: (0, path_1.join)(__dirname, '..'),
+                serveRoot: '/',
+                exclude: ['/api*', '/auth*', '/users*', '/stream*'],
+                serveStaticOptions: {
+                    index: 'geodesic.html',
+                },
+            }),
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

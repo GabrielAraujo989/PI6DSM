@@ -15,7 +15,7 @@ COPY . .
 # Compilar a aplicação
 RUN npm run build
 
-# Script de inicialização: executa migrations e inicia o backend
+# Script de inicialização: aguarda banco, executa migrations e inicia backend
 RUN echo '#!/bin/sh' > /usr/src/app/start.sh && \
     echo 'echo "Aguardando banco de dados..."' >> /usr/src/app/start.sh && \
     echo 'until nc -z $DB_HOST $DB_PORT; do sleep 1; done' >> /usr/src/app/start.sh && \
@@ -24,6 +24,9 @@ RUN echo '#!/bin/sh' > /usr/src/app/start.sh && \
     echo 'echo "Iniciando backend..."' >> /usr/src/app/start.sh && \
     echo 'node dist/src/main.js' >> /usr/src/app/start.sh && \
     chmod +x /usr/src/app/start.sh
+
+# Mantém geodesic.html e arquivos estáticos acessíveis
+RUN mkdir -p /usr/src/app/dist && cp geodesic.html /usr/src/app/dist/
 
 # Remover arquivos desnecessários, mas manter node_modules para as migrações
 RUN npm prune --production && \
