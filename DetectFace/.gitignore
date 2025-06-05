@@ -14,7 +14,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
-*.pt
 *.pth
 *.onnx
 *.h5
@@ -38,4 +37,3 @@ __pycache__/
 yolo11s.pt
 exemplo1.mp4
 exemplo2.mp4
-# Docker
