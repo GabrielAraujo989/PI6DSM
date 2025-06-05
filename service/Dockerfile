@@ -1,15 +1,14 @@
-FROM node:18-alpine
-
-WORKDIR /usr/src/app
-
+FROM node:20-alpine as build
+WORKDIR /app
 COPY package*.json ./
-
-RUN npm install --legacy-peer-deps
-
+RUN npm install
 COPY . .
-
 RUN npm run build
 
-EXPOSE 8081
-
-CMD ["node", "dist/src/main.js"]
+FROM node:20-alpine as prod
+WORKDIR /app
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+EXPOSE 8082
+CMD ["node", "dist/main.js"]
