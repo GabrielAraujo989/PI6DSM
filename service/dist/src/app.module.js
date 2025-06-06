@@ -51,7 +51,15 @@ exports.AppModule = AppModule = __decorate([
             serve_static_1.ServeStaticModule.forRoot({
                 rootPath: (0, path_1.join)(__dirname, '..'),
                 serveRoot: '/',
-                exclude: ['/api*', '/auth*', '/users*', '/stream*'],
+                exclude: [
+                    '/auth*',
+                    '/users*',
+                    '/stream*',
+                    '/api*',
+                    '/favicon.ico',
+                    '/robots.txt',
+                    '/assets*',
+                ],
                 serveStaticOptions: {
                     index: 'geodesic.html',
                 },

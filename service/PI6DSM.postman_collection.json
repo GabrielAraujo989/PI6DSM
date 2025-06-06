@@ -21,7 +21,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"ga.padua92@gmail.com\",\n  \"password\": \"123@gabriel\"\n}"
+							"raw": "{\n  \"email\": \"ga.padua92@gmail.com\",\n  \"password\": \"123@Teste\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/auth/login",

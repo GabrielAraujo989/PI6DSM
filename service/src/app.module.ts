@@ -40,7 +40,15 @@ import { join } from 'path';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..'),
       serveRoot: '/',
-      exclude: ['/api*', '/auth*', '/users*', '/stream*'],
+      exclude: [
+        '/auth*',
+        '/users*',
+        '/stream*',
+        '/api*',
+        '/favicon.ico',
+        '/robots.txt',
+        '/assets*',
+      ],
       serveStaticOptions: {
         index: 'geodesic.html',
       },

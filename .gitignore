@@ -54,3 +54,4 @@ docker-compose.yml
 
 # Ignore generated assets
 frontend/assets/images/*.png
+service/node_modules
