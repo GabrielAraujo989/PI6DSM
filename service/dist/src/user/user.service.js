@@ -18,7 +18,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("./entities/user.entity");
 const user_entity_2 = require("./entities/user.entity");
-const bcrypt = require("bcryptjs");
+const argon2 = require("argon2");
 const encryption_service_1 = require("../common/services/encryption.service");
 let UserService = class UserService {
     constructor(userRepository, encryptionService) {
@@ -41,7 +41,7 @@ let UserService = class UserService {
                 throw new common_1.ForbiddenException('Número máximo de Super Usuários atingido');
             }
         }
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+        const hashedPassword = await argon2.hash(createUserDto.password);
         const encryptedUser = {
             ...createUserDto,
             name: this.encryptionService.encrypt(createUserDto.name),
@@ -95,7 +95,7 @@ let UserService = class UserService {
             encryptedUpdateData.birthDate = updateUserDto.birthDate;
         }
         if (updateUserDto.password) {
-            encryptedUpdateData.password = await bcrypt.hash(updateUserDto.password, 10);
+            encryptedUpdateData.password = await argon2.hash(updateUserDto.password);
         }
         if (updateUserDto.role)
             encryptedUpdateData.role = updateUserDto.role;

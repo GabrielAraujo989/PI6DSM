@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserRole } from './entities/user.entity';
-import * as bcrypt from 'bcryptjs';
+import * as argon2 from 'argon2';
 import { EncryptionService } from '../common/services/encryption.service';
 
 @Injectable()
@@ -39,7 +39,7 @@ export class UserService {
     }
 
     // Criptografar a senha
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const hashedPassword = await argon2.hash(createUserDto.password);
 
     // Criptografar dados pessoais
     const encryptedUser = {
@@ -108,7 +108,7 @@ export class UserService {
     }
     
     if (updateUserDto.password) {
-      encryptedUpdateData.password = await bcrypt.hash(updateUserDto.password, 10);
+      encryptedUpdateData.password = await argon2.hash(updateUserDto.password);
     }
     
     // Adicionar outros campos não criptografados
