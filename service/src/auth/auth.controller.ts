@@ -12,6 +12,11 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
-    return this.authService.login(user);
+    const loginResult = await this.authService.login(user);
+    return {
+      ...loginResult,
+      name: user.name,
+      role: user.role,
+    };
   }
-} 
+}
