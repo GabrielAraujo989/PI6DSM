@@ -24,6 +24,9 @@ FROM nginx:alpine
 # Copia o build gerado para o nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Copia nossa configuração customizada do NGINX, que sabe lidar com SPAs.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Expor a porta 80
 EXPOSE 80
 
