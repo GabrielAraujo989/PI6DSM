@@ -255,7 +255,9 @@ const styles = StyleSheet.create({
   dropdownHeader: {
     padding: 12,
     backgroundColor: '#f2f2f2',
-    borderBottom: '1px solid #ccc',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    borderStyle: 'solid',
     cursor: 'pointer',
     userSelect: 'none',
   },

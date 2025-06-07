@@ -10,7 +10,9 @@ import {
   Alert
 } from "react-native";
 import { useRouter } from 'expo-router';
-import { login } from '../api/authApi';
+import { login } from '../../api/authApi';
+import { AuthContext } from '../../contexts/AuthContext';
+import { saveToken, getToken } from '../../service/storage';
 import * as Animatable from 'react-native-animatable';
 
 export default function Welcome() {

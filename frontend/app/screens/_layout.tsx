@@ -1,4 +1,5 @@
 import { Drawer } from "expo-router/drawer";
+import { AuthContext } from '../../contexts/AuthContext';
 
 export default function DrawerLayout() {
   return (
