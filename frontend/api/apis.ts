@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // API principal (autenticação, usuários, etc)
 const api = axios.create({
-  baseURL: Constants.expoConfig?.extra?.API_BASE_URL || 'http://localhost:8081',
+  baseURL: Constants.expoConfig?.extra?.API_BASE_URL,
 });
 
 // DetectFace API (câmeras)
 export const detectfaceApi = axios.create({
-  baseURL: Constants.expoConfig?.extra?.DETECTFACE_BASE_URL || 'http://localhost:8000',
+  baseURL: Constants.expoConfig?.extra?.DETECTFACE_BASE_URL,
 });
 
 // Função auxiliar para buscar token de forma assíncrona
