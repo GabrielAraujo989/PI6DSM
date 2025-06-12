@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  detectface:
+    build:
+      context: ./DetectFace
+      dockerfile: Dockerfile
+    image: detectface-app:latest
+    restart: unless-stopped
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-SUA_SECRET_KEY}
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    # Para uso de GPU, descomente a linha abaixo e garanta suporte no host
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=all
+    # runtime: nvidia
+    volumes:
+      - ./DetectFace:/app
+    # Ajuste para produção: use um volume persistente para modelos/pesos
+    # - ./DetectFace/best.pt:/app/best.pt
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: pi6dsm-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    depends_on:
+      - detectface
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./frontend:/app
+    # Ajuste para produção: use um volume persistente para assets
+
+networks:
+  default:
+    driver: bridge

@@ -11,11 +11,20 @@ import jwt
 from typing import List
 from dotenv import load_dotenv
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Carrega o modelo uma vez
-MODEL_PATH = '/home/gabriel/PI6DSM/DetectFace/Yolo_Test/best.pt'
+MODEL_PATH = '/home/gabriel/PI6DSM/DetectFace/best.pt'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 modelo = YOLO(MODEL_PATH).to(device)
 
@@ -68,8 +77,10 @@ class CameraRequest(BaseModel):
 
 @app.post("/start_camera/")
 def start_camera(req: CameraRequest, request: Request = Depends(verify_jwt)):
-    t = threading.Thread(target=process_camera, args=(req.url, req.conf), daemon=True)
-    t.start()
+    # Garante que a thread não será duplicada para o mesmo IP
+    if req.url not in frames_cameras:
+        t = threading.Thread(target=process_camera, args=(req.url, req.conf), daemon=True)
+        t.start()
     # Gera um índice para a câmera recém-adicionada
     with frames_lock:
         keys = list(frames_cameras.keys())
@@ -77,7 +88,8 @@ def start_camera(req: CameraRequest, request: Request = Depends(verify_jwt)):
     return {
         "status": "started",
         "camera": req.url,
-        "stream_url": f"/stream/video/{idx}"
+        "stream_url": f"/stream/video/{idx}",
+        "ip": req.url
     }
 
 @app.get("/")
@@ -117,12 +129,11 @@ def start_cameras(req: StartCamerasRequest, request: Request = Depends(verify_jw
         streams.append(f"/stream/video/{idx}")
     return {"streams": streams}
 
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 
 @app.get("/stream/video/{idx}")
 def video_stream(idx: int, request: Request = Depends(verify_jwt)):
     # Aqui você pode mapear o idx para o IP real (exemplo simplificado)
-    # Para produção, use um dicionário global para mapear idx -> IP
     ips = list(frames_cameras.keys())
     if idx >= len(ips):
         raise HTTPException(status_code=404, detail="Câmera não encontrada")
@@ -137,4 +148,20 @@ def video_stream(idx: int, request: Request = Depends(verify_jwt)):
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
             time.sleep(0.1)
-    return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")
+    headers = {"Access-Control-Allow-Origin": "*"}
+    return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame", headers=headers)
+
+# Novo endpoint para contagem de faces por IP
+
+@app.get("/faces_count")
+def faces_count(ip: str, request: Request = Depends(verify_jwt)):
+    with frames_lock:
+        frame = frames_cameras.get(ip)
+    if frame is None:
+        return JSONResponse({"count": 0})
+    # Detecta faces no último frame processado
+    resultados = modelo.predict(source=frame, conf=0.5, device=device, verbose=False, stream=True)
+    for resultado in resultados:
+        faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
+        return JSONResponse({"count": len(faces)})
+    return JSONResponse({"count": 0})
