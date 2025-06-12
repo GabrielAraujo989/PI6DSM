@@ -24,7 +24,7 @@ export default function Monitoramento() {
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        //<CameraWrapper />
+        <CameraWrapper />
         <CameraScanner />
 
         <View style={styles.summaryContainer}>
