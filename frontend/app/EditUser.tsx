@@ -174,18 +174,21 @@ export default function EditUser() {
         />
         <TextInput placeholder="Nova senha (opcional)" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
         <TextInput placeholder="Confirmar nova senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={perfil}
-            onValueChange={(itemValue) => setPerfil(itemValue)}
-            style={styles.picker}
-            enabled={user?.role === 'SUPER_USER'}
-          >
-            {perfilOptions.map(opt => (
-              <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-            ))}
-          </Picker>
-        </View>
+        {/* Picker de perfil só aparece para SUPER_USER */}
+        {user?.role === 'SUPER_USER' && (
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={perfil}
+              onValueChange={(itemValue) => setPerfil(itemValue)}
+              style={styles.picker}
+              enabled={true}
+            >
+              {perfilOptions.map(opt => (
+                <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+              ))}
+            </Picker>
+          </View>
+        )}
         <TouchableOpacity style={styles.uploadBtn} onPress={escolherImagem}>
           <Text style={styles.uploadText}>Selecionar imagem</Text>
         </TouchableOpacity>
