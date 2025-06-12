@@ -92,7 +92,7 @@ class CameraRequest(BaseModel):
     conf: float = 0.5
 
 @app.post("/start_camera/")
-def start_camera(req: CameraRequest, request: Request = Depends(verify_jwt)):
+def start_camera(req: CameraRequest, payload=Depends(verify_jwt)):
     # Garante que a thread não será duplicada para o mesmo IP
     if req.url not in frames_cameras:
         t = threading.Thread(target=process_camera, args=(req.url, req.conf), daemon=True)
@@ -121,7 +121,7 @@ class StartCamerasRequest(BaseModel):
     camera_ips: List[str]
 
 @app.post("/start_cameras/")
-def start_cameras(req: StartCamerasRequest, request: Request = Depends(verify_jwt)):
+def start_cameras(req: StartCamerasRequest, payload=Depends(verify_jwt)):
     streams = []
     for idx, ip in enumerate(req.camera_ips):
         t = threading.Thread(target=process_camera, args=(ip, 0.5), daemon=True)
@@ -132,7 +132,7 @@ def start_cameras(req: StartCamerasRequest, request: Request = Depends(verify_jw
 from fastapi.responses import StreamingResponse, JSONResponse
 
 @app.get("/stream/video/{idx}")
-def video_stream(idx: int, request: Request = Depends(verify_jwt)):
+def video_stream(idx: int, payload=Depends(verify_jwt)):
     # Aqui você pode mapear o idx para o IP real (exemplo simplificado)
     ips = list(frames_cameras.keys())
     if idx >= len(ips):
@@ -154,7 +154,7 @@ def video_stream(idx: int, request: Request = Depends(verify_jwt)):
 # Novo endpoint para contagem de faces por IP
 
 @app.get("/faces_count")
-def faces_count(ip: str, request: Request = Depends(verify_jwt)):
+def faces_count(ip: str, payload=Depends(verify_jwt)):
     with frames_lock:
         frame = frames_cameras.get(ip)
     if frame is None:
