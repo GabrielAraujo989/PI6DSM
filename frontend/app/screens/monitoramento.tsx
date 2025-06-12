@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import Header from '../../components/Header';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import CameraWrapper from '../../components/CameraWrapper';
+import CameraScanner from '../../components/CameraScanner';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -24,6 +25,7 @@ export default function Monitoramento() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <CameraWrapper />
+        <CameraScanner />
 
         <View style={styles.summaryContainer}>
           <View style={[styles.card, styles.blueCard]}>
