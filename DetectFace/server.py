@@ -70,6 +70,22 @@ def process_camera(source_url, conf=0.5):
     with frames_lock:
         frames_cameras[source_url] = None
 
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY", "SUA_SECRET_KEY")
+
+# Função para verificar JWT
+
+def verify_jwt(request: Request):
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token ausente")
+    token = auth.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
 # Rota para iniciar detecção em uma nova câmera
 class CameraRequest(BaseModel):
     url: str
@@ -100,22 +116,6 @@ def root():
 def start_monitoramento():
     t = threading.Thread(target=mostrar_todas_cameras, daemon=True)
     t.start()
-
-load_dotenv()
-SECRET_KEY = os.getenv("SECRET_KEY", "SUA_SECRET_KEY")
-
-# Função para verificar JWT
-
-def verify_jwt(request: Request):
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Token ausente")
-    token = auth.split(" ")[1]
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return payload
-    except Exception:
-        raise HTTPException(status_code=401, detail="Token inválido")
 
 class StartCamerasRequest(BaseModel):
     camera_ips: List[str]
