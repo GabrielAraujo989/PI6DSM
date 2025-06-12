@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -9,14 +9,17 @@ import {
   Alert,
   ScrollView
 } from "react-native";
-import Header from '../../components/Header';
+import Header from '../components/Header';
 import * as ImagePicker from 'expo-image-picker';
-import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { AuthContext } from '../contexts/AuthContext';
+import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Cadastro() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { user } = useContext(AuthContext);
 
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
@@ -25,26 +28,37 @@ export default function Cadastro() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [imagem, setImagem] = useState<string | null>(null);
-  const [perfil, setPerfil] = useState('padrao');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [id, setId] = useState<string | null>(null);
   const [modoEdicao, setModoEdicao] = useState(false);
 
   useEffect(() => {
-    if (params && params.pessoa) {
-      const pessoa = JSON.parse(params.pessoa as string);
-      setNome(pessoa.nome);
-      setCpf(pessoa.cpf);
-      setEmail(pessoa.email);
-      setSenha(pessoa.password);
-      setConfirmarSenha(pessoa.password);
-      setDataNascimento(pessoa.dataNascimento);
-      setImagem(pessoa.foto || null);
-      setId(pessoa.id);
+    // Só atualiza os campos se o id do usuário mudar
+    const pessoa = params && params.pessoa ? JSON.parse(params.pessoa as string) : null;
+    if (pessoa && pessoa.id !== id) {
+      setNome(pessoa.nome || pessoa.name || '');
+      setCpf(pessoa.cpf || '');
+      setEmail(pessoa.email || '');
+      setSenha(pessoa.password || '');
+      setConfirmarSenha(pessoa.password || '');
+      setDataNascimento(pessoa.dataNascimento || pessoa.birthDate || '');
+      setImagem(pessoa.foto || pessoa.photoUrl || null);
+      setId(pessoa.id || null);
       setModoEdicao(true);
+    } else if (!pessoa && id !== null) {
+      // Se não há pessoa, limpa o formulário
+      setNome('');
+      setCpf('');
+      setEmail('');
+      setSenha('');
+      setConfirmarSenha('');
+      setDataNascimento('');
+      setImagem(null);
+      setId(null);
+      setModoEdicao(false);
     }
-  }, [params]);
+  }, [params?.pessoa]);
 
   const aplicarMascaraCPF = (cpf: string): string => {
     cpf = cpf.replace(/\D/g, '').slice(0, 11);
@@ -102,29 +116,20 @@ const validarData = (data: string): boolean => {
     }
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8081/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: nome,
-          cpf: cpf.replace(/\D/g, ''),
-          email,
-          password: senha,
-          birthDate: dataNascimento.split('/').reverse().join('-'),
-          role: perfil === 'admin' ? 'ADMIN' : 'CLIENT',
-          photoUrl: imagem,
-        })
+      // Usa o axios para garantir BASE_URL correta
+      await api.post('/users/register', {
+        name: nome,
+        cpf: cpf.replace(/\D/g, ''),
+        email,
+        password: senha,
+        birthDate: dataNascimento.split('/').reverse().join('-'),
+        role: 'CLIENT',
+        photoUrl: imagem,
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.message || 'Erro ao cadastrar usuário.');
-        setLoading(false);
-        return;
-      }
       Alert.alert('Sucesso', 'Cadastro realizado!');
-      router.push('/screens/login');
-    } catch (err) {
-      setError('Erro de conexão com o servidor.');
+      router.push('/login');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Erro ao cadastrar usuário.');
     } finally {
       setLoading(false);
     }
@@ -157,7 +162,7 @@ const validarData = (data: string): boolean => {
       password: senha,
       dataNascimento,
       foto: imagem,
-      perfil,
+      perfil: 'CLIENT',
     };
 
     if (params.salvarCadastro) {
@@ -169,6 +174,9 @@ const validarData = (data: string): boolean => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <TouchableOpacity style={{ position: 'absolute', top: 40, left: 20, zIndex: 10 }} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={28} color="#333" />
+      </TouchableOpacity>
       <Header title="Cadastro" />
       <View style={styles.textInput}>
         <TextInput placeholder="Nome completo" style={styles.input} value={nome} onChangeText={setNome} />
@@ -197,17 +205,6 @@ const validarData = (data: string): boolean => {
         <TextInput placeholder="Senha" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
         <TextInput placeholder="Confirmar senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
 
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={perfil}
-            onValueChange={(itemValue) => setPerfil(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Padrão" value="padrao" />
-            <Picker.Item label="Administrador" value="admin" />
-          </Picker>
-        </View>
-
         <TouchableOpacity style={styles.uploadBtn} onPress={escolherImagem}>
           <Text style={styles.uploadText}>Selecionar imagem</Text>
         </TouchableOpacity>
@@ -217,7 +214,7 @@ const validarData = (data: string): boolean => {
         <TouchableOpacity style={[styles.button, loading && { opacity: 0.7 }]} onPress={handleRegister} disabled={loading}>
           <Text style={styles.buttonText}>{loading ? 'Cadastrando...' : 'Cadastrar'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buttonCadastro} onPress={() => router.push('/screens/login')}>
+        <TouchableOpacity style={styles.buttonCadastro} onPress={() => router.push('/login')}>
           <Text style={styles.buttonCad}>Já tem uma conta? Faça login</Text>
         </TouchableOpacity>
       </View>
@@ -273,16 +270,4 @@ const styles = StyleSheet.create({
   buttonCadastro: { marginTop: 20, alignItems: 'center' },
   buttonCad: { color: '#38a69d', fontWeight: 'bold' },
   error: { color: 'red', marginBottom: 8, textAlign: 'center' },
-  pickerContainer: {
-    width: '80%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    marginBottom: 10,
-    overflow: 'hidden',
-  },
-  picker: {
-    width: '100%',
-    height: 40,
-  },
 });

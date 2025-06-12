@@ -1,0 +1,3 @@
+// ...existing code from /home/gabriel/PI6DSM/frontend/app/screens/login.tsx...
+
+export default function Login() { return null; }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,20 @@ import {
   ScrollView,
 } from 'react-native';
 import Header from '../../components/Header';
+import { AuthContext } from '../../contexts/AuthContext';
 
 export default function Welcome() {
+  const { user } = useContext(AuthContext);
+
+  // Função para extrair o primeiro nome
+  const getFirstName = (fullName?: string) => {
+    if (!fullName) return '';
+    return fullName.split(' ')[0];
+  };
 
   return (
     <View style={{ flex: 1 }}>
-
-      <Header title="Sejam Bem Vindos"/>     
-
+      <Header title={`Olá${user?.name ? ", " + getFirstName(user.name) : ''}`}/>
       <ScrollView style={styles.container}>            
         <View style={styles.summaryContainer}>
           <View style={[styles.card, styles.blueCard]}>

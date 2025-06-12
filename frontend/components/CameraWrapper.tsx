@@ -156,7 +156,7 @@ export default function CameraWrapper() {
       {/* 🔽 USB Cameras Dropdown */}
       <div style={styles.dropdown}>
         <div style={styles.dropdownHeader} onClick={() => setUsbOpen(!usbOpen)}>
-          <strong>🎥 Câmeras USB</strong> {usbOpen ? '▲' : '▼'}
+          <strong>🎥 Câmeras Local</strong> {usbOpen ? '▲' : '▼'}
         </div>
         {usbOpen && (
           <div style={styles.dropdownContent}>

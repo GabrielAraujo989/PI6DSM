@@ -88,7 +88,7 @@ export default function CameraWrapper() {
   return (
     <View style={styles.container}>
       <View style={styles.cameraSelectionContainer}>
-        <Text style={styles.selectionTitle}>Selecione as câmeras USB para ativar:</Text>
+        <Text style={styles.selectionTitle}>Selecione as câmeras Local para ativar:</Text>
         {cameras.map((cam) => {
           const isChecked = activeCameras.some((c) => c.deviceId === cam.deviceId);
           return (

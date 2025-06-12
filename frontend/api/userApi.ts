@@ -12,12 +12,17 @@ interface CreateUserDto {
 }
 
 export const getProfile = async () => {
-  const response = await api.get('/user/profile');
+  const response = await api.get('/users/profile');
   return response.data;
 };
 
-export const getUsers = async () => {
-  const response = await api.get('/users');
+// Busca todos os usuários, com filtro de role se necessário
+export const getUsers = async (roleFilter?: string) => {
+  let url = '/users';
+  if (roleFilter) {
+    url += `?role=${roleFilter}`;
+  }
+  const response = await api.get(url);
   return response.data;
 };
 

@@ -1,0 +1,3 @@
+// ...existing code from /home/gabriel/PI6DSM/frontend/app/screens/EditUser.tsx...
+
+export default function EditUser() { return null; }
