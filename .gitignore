@@ -50,5 +50,4 @@ dist/
 *.old
 
 # Ignore generated assets
-frontend/assets/images/*.png
 service/node_modules

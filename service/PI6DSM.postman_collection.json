@@ -233,6 +233,30 @@
 						"description": "Excluir um usuário"
 					},
 					"response": []
+				},
+				{
+					"name": "Obter Perfil do Usuário Autenticado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"profile"
+							]
+						},
+						"description": "Retorna o perfil do usuário autenticado. Necessário token JWT."
+					},
+					"response": []
 				}
 			],
 			"description": "Operações CRUD de usuários"
