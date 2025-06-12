@@ -93,6 +93,7 @@ class CameraRequest(BaseModel):
 
 @app.post("/start_camera/")
 def start_camera(req: CameraRequest, payload=Depends(verify_jwt)):
+    print(f"[DETECTFACE] Solicitação recebida para iniciar câmera: {req.url}")
     # Garante que a thread não será duplicada para o mesmo IP
     if req.url not in frames_cameras:
         t = threading.Thread(target=process_camera, args=(req.url, req.conf), daemon=True)
@@ -101,12 +102,14 @@ def start_camera(req: CameraRequest, payload=Depends(verify_jwt)):
     with frames_lock:
         keys = list(frames_cameras.keys())
         idx = keys.index(req.url) if req.url in keys else len(keys)
-    return {
+    resposta = {
         "status": "started",
         "camera": req.url,
         "stream_url": f"/stream/video/{idx}",
         "ip": req.url
     }
+    print(f"[DETECTFACE] Resposta enviada ao frontend: {resposta}")
+    return resposta
 
 @app.get("/")
 def root():
@@ -165,3 +168,20 @@ def faces_count(ip: str, payload=Depends(verify_jwt)):
         faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
         return JSONResponse({"count": len(faces)})
     return JSONResponse({"count": 0})
+
+@app.get("/faces_count_all")
+def faces_count_all(payload=Depends(verify_jwt)):
+    resposta = []
+    with frames_lock:
+        for ip, frame in frames_cameras.items():
+            if frame is None:
+                resposta.append({"ip": ip, "count": 0})
+                continue
+            resultados = modelo.predict(source=frame, conf=0.5, device=device, verbose=False, stream=True)
+            for resultado in resultados:
+                faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
+                resposta.append({"ip": ip, "count": len(faces)})
+                break
+            else:
+                resposta.append({"ip": ip, "count": 0})
+    return resposta

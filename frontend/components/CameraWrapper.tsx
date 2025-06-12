@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, StyleSheet, Button, Platform } from 'react-native';
 import { AuthContext } from '../contexts/AuthContext';
+import api, { detectfaceApi } from '../api/apis';
 
 type CameraStream = {
   deviceId: string;
@@ -114,6 +115,27 @@ export default function CameraWrapper() {
     return () => clearInterval(interval);
   }, [ipCameras, jwt]);
 
+  // Função para buscar contagem de faces de todas as câmeras
+  useEffect(() => {
+    if (!jwt) return;
+    const interval = setInterval(() => {
+      fetch(`${process.env.DETECTFACE_BASE_URL || DETECTFACE_API}/faces_count_all`, {
+        headers: { 'Authorization': `Bearer ${jwt}` }
+      })
+        .then(res => res.json())
+        .then((data: {ip: string, count: number}[]) => {
+          if (Array.isArray(data)) {
+            const counts: {[ip: string]: number} = {};
+            data.forEach(item => {
+              counts[item.ip] = item.count;
+            });
+            setFaceCounts(counts);
+          }
+        });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [ipCameras, jwt]);
+
   const toggleCamera = async (deviceId: string, checked: boolean) => {
     if (checked) {
       try {
@@ -164,6 +186,27 @@ export default function CameraWrapper() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Função para conectar à câmera via DetectFace
+  async function conectarCameraDetectFace(ipCameraUrl: string) {
+    console.log('[FRONTEND] Iniciando conexão com DetectFace:', ipCameraUrl);
+    try {
+      // 1. Solicita início da detecção
+      const response = await detectfaceApi.post('/start_camera/', {
+        url: ipCameraUrl,
+        conf: 0.5,
+      });
+      console.log('[FRONTEND] Solicitação enviada para DetectFace:', response.config.url, response.data);
+      // 2. Aguarda resposta e exibe stream_url
+      if (response.data && typeof response.data === 'object' && 'stream_url' in response.data) {
+        console.log('[FRONTEND] Stream disponível em:', response.data.stream_url);
+      }
+      return response.data;
+    } catch (error) {
+      console.error('[FRONTEND] Erro ao conectar com DetectFace:', error);
+      throw error;
+    }
+  }
 
   if (Platform.OS !== 'web') {
     return <Text>Essa versão é para web apenas</Text>;
@@ -300,6 +343,19 @@ export default function CameraWrapper() {
           onPress={() => startDetectFace(cam.ip)}
         />
       ))}
+
+      {/* Renderização das câmeras IP com contagem de faces */}
+      <View>
+        {ipCameras.map((cam) => (
+          <View key={cam.ip} style={{ marginBottom: 24 }}>
+            <Text style={{ fontWeight: 'bold' }}>Câmera IP: {cam.ip}</Text>
+            {/* Aqui você pode renderizar o vídeo/stream da câmera se desejar */}
+            <Text style={{ color: '#007AFF', marginTop: 4 }}>
+              Rostos detectados: {faceCounts[cam.ip] ?? 'Carregando...'}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
