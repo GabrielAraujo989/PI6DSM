@@ -24,7 +24,7 @@ app.add_middleware(
 )
 
 # Carrega o modelo uma vez
-MODEL_PATH = '/home/gabriel/PI6DSM/DetectFace/best.pt'
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'best.pt')
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 modelo = YOLO(MODEL_PATH).to(device)
 
