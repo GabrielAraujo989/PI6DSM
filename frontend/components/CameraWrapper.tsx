@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState, useContext } from 'react';
+import { View, Text, StyleSheet, Button, Platform } from 'react-native';
+import { AuthContext } from '../contexts/AuthContext';
 
 type CameraStream = {
   deviceId: string;
@@ -14,6 +15,7 @@ type IPCamera = {
 
 const HTTP_USERNAME = 'admin';
 const HTTP_PASSWORD = '1nf04mat!c@';
+const DETECTFACE_API = 'http://localhost:8000'; // ajuste se rodar em outro host/porta
 
 export default function CameraWrapper() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -21,6 +23,9 @@ export default function CameraWrapper() {
   const [activeCameras, setActiveCameras] = useState<CameraStream[]>([]);
   const [ipCameras, setIpCameras] = useState<IPCamera[]>([]);
   const [selectedIPStreams, setSelectedIPStreams] = useState<string[]>([]);
+  const { user } = useContext(AuthContext);
+  const [jwt, setJwt] = useState<string | null>(null);
+  const [faceCounts, setFaceCounts] = useState<{[ip: string]: number}>({});
 
   const [usbOpen, setUsbOpen] = useState<boolean>(true);
   const [ipOpen, setIpOpen] = useState<boolean>(true);
@@ -64,6 +69,50 @@ export default function CameraWrapper() {
         .catch(err => console.error("Erro ao buscar câmeras IP:", err));
     }
   }, []);
+
+  useEffect(() => {
+    // Supondo que o token JWT está salvo no localStorage/AsyncStorage
+    (async () => {
+      let token = null;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        token = window.localStorage.getItem('token');
+      } else {
+        const mod = await import('@react-native-async-storage/async-storage');
+        token = await mod.default.getItem('token');
+      }
+      setJwt(token);
+    })();
+  }, []);
+
+  // Função para iniciar detecção no DetectFace
+  const startDetectFace = async (ip: string) => {
+    if (!jwt) return;
+    await fetch(`${DETECTFACE_API}/start_camera/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${jwt}`
+      },
+      body: JSON.stringify({ url: ip, conf: 0.5 })
+    });
+  };
+
+  // Função para buscar contagem de faces (via polling simples)
+  useEffect(() => {
+    if (!jwt) return;
+    const interval = setInterval(() => {
+      ipCameras.forEach(cam => {
+        fetch(`${DETECTFACE_API}/faces_count?ip=${cam.ip}`, {
+          headers: { 'Authorization': `Bearer ${jwt}` }
+        })
+          .then(res => res.json())
+          .then(data => {
+            setFaceCounts(prev => ({ ...prev, [cam.ip]: data.count }));
+          });
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [ipCameras, jwt]);
 
   const toggleCamera = async (deviceId: string, checked: boolean) => {
     if (checked) {
@@ -143,13 +192,17 @@ export default function CameraWrapper() {
           />
         ))}
 
-        {selectedIPStreams.map((ip) => (
-          <iframe
-            key={ip}
-            src={`http://${HTTP_USERNAME}:${HTTP_PASSWORD}@${ip}`}
-            style={styles.video}
-            allow="autoplay"
-          />
+        {selectedIPStreams.map((ip, idx) => (
+          <View key={ip} style={{ margin: 10 }}>
+            <img
+              src={`${DETECTFACE_API}/stream/video/${idx}`}
+              alt={`Câmera ${ip}`}
+              style={{ width: 400, height: 300, borderRadius: 10, border: '2px solid #3498db', backgroundColor: '#000', objectFit: 'cover' }}
+            />
+            <Text style={{ color: '#fff', fontWeight: 'bold', marginTop: 4 }}>
+              Rostos detectados: {faceCounts[ip] ?? '...'}
+            </Text>
+          </View>
         ))}
       </View>
 
@@ -238,6 +291,15 @@ export default function CameraWrapper() {
           </div>
         )}
       </div>
+
+      {/* Botão para iniciar detecção no DetectFace */}
+      {ipCameras.map(cam => (
+        <Button
+          key={cam.ip}
+          title={`Iniciar detecção em ${cam.ip}`}
+          onPress={() => startDetectFace(cam.ip)}
+        />
+      ))}
     </View>
   );
 }
@@ -247,7 +309,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   dropdown: {
-    border: '1px solid #ccc',
     borderRadius: 8,
     marginBottom: 16,
     backgroundColor: '#fff',
@@ -270,7 +331,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     borderWidth: 2,
-    borderStyle: 'solid',
+    borderColor: '#ccc',
     cursor: 'pointer',
     marginBottom: 8,
   } as any,
@@ -291,9 +352,9 @@ const styles = StyleSheet.create({
     width: 'auto',
     height: 240,
     borderRadius: 10,
-    border: '2px solid #3498db',
+    borderWidth: 2,
+    borderColor: '#3498db',
     backgroundColor: '#000',
-    objectFit: 'cover',
   } as any,
   permissionText: {
     color: '#f00',
