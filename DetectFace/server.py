@@ -170,6 +170,27 @@ def start_camera(req: CameraRequest):
     print(f"[API] Resposta enviada ao frontend: {resposta}")
     return resposta
 
+@app.post("/start_cameras/", summary="Inicia a detecção em múltiplas câmeras", dependencies=[Depends(verify_jwt)])
+def start_cameras(req: StartCamerasRequest):
+    """
+    Inicia threads para processar múltiplas câmeras enviadas pelo frontend.
+    """
+    started = []
+    already_running = []
+    for ip in req.camera_ips:
+        with frames_lock:
+            if ip in cameras_data and cameras_data[ip].get("status") == "running":
+                already_running.append(ip)
+                continue
+        t = threading.Thread(target=process_camera, args=(ip, 0.5), daemon=True)
+        t.start()
+        started.append(ip)
+    return {
+        "started": started,
+        "already_running": already_running,
+        "message": f"{len(started)} câmeras iniciadas, {len(already_running)} já estavam em execução."
+    }
+
 @app.get("/video/stream", summary="Fornece o stream de vídeo de uma câmera")
 def video_stream(camera_url: str = Query(...)):
     """

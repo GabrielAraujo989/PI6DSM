@@ -99,6 +99,19 @@ export default function CameraWrapper() {
     });
   };
 
+  // Função para iniciar detecção em múltiplas câmeras selecionadas (nova rota DetectFace)
+  const startDetectFaceMultiple = async () => {
+    if (!jwt || selectedIPStreams.length === 0) return;
+    await fetch(`${DETECTFACE_API}/start_cameras/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${jwt}`
+      },
+      body: JSON.stringify({ camera_ips: selectedIPStreams })
+    });
+  };
+
   // Função para buscar contagem de faces (via polling simples)
   useEffect(() => {
     if (!jwt) return;
@@ -351,14 +364,16 @@ export default function CameraWrapper() {
         )}
       </div>
 
-      {/* Botão para iniciar detecção no DetectFace */}
-      {ipCameras.map(cam => (
-        <Button
-          key={cam.ip}
-          title={`Iniciar detecção em ${cam.ip}`}
-          onPress={() => startDetectFace(cam.ip)}
-        />
-      ))}
+      {/* Botão para iniciar detecção em todas as selecionadas */}
+      {ipCameras.length > 0 && (
+        <button
+          style={{ margin: '12px 0', padding: '8px 18px', borderRadius: 6, background: '#27ae60', color: '#fff', border: 'none', cursor: 'pointer' }}
+          onClick={startDetectFaceMultiple}
+          disabled={selectedIPStreams.length === 0}
+        >
+          Iniciar Monitoramento das Selecionadas
+        </button>
+      )}
 
       {/* Renderização das câmeras IP com contagem de faces */}
       <View>
