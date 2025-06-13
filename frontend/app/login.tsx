@@ -15,7 +15,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import { saveToken, getToken } from '../service/storage';
 import * as Animatable from 'react-native-animatable';
 
-export default function Welcome() {
+export default function Monitoramento() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
