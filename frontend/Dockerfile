@@ -9,6 +9,9 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 
+# Limpa resíduos de builds anteriores
+RUN rm -rf dist web-build .next
+
 # Build para web (Expo Router)
 RUN echo "[BUILD] Iniciando build Expo Router..." && npx expo export --platform web && echo "[BUILD] Build Expo finalizado."
 
