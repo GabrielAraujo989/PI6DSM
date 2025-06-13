@@ -340,6 +340,10 @@ export default function CameraWrapper() {
                     style={{ marginRight: 8 }}
                   />
                   <span>{cam.ip} ({cam.type})</span>
+                  <button
+                    style={{ marginLeft: 16, padding: '4px 12px', borderRadius: 6, background: '#3498db', color: '#fff', border: 'none', cursor: 'pointer' }}
+                    onClick={() => startDetectFace(cam.ip)}
+                  >Iniciar Monitoramento</button>
                 </div>
               );
             })}
