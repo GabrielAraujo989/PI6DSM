@@ -15,10 +15,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# CORS irrestrito: permite qualquer origem, sem credenciais
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # Não pode ser True com allow_origins=['*']
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -161,13 +162,13 @@ def faces_count(ip: str, payload=Depends(verify_jwt)):
     with frames_lock:
         frame = frames_cameras.get(ip)
     if frame is None:
-        return JSONResponse({"count": 0})
+        return JSONResponse({"count": 0}, headers={"Access-Control-Allow-Origin": "*"})
     # Detecta faces no último frame processado
     resultados = modelo.predict(source=frame, conf=0.5, device=device, verbose=False, stream=True)
     for resultado in resultados:
         faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
-        return JSONResponse({"count": len(faces)})
-    return JSONResponse({"count": 0})
+        return JSONResponse({"count": len(faces)}, headers={"Access-Control-Allow-Origin": "*"})
+    return JSONResponse({"count": 0}, headers={"Access-Control-Allow-Origin": "*"})
 
 @app.get("/faces_count_all")
 def faces_count_all(payload=Depends(verify_jwt)):
@@ -184,4 +185,4 @@ def faces_count_all(payload=Depends(verify_jwt)):
                 break
             else:
                 resposta.append({"ip": ip, "count": 0})
-    return resposta
+    return JSONResponse(resposta, headers={"Access-Control-Allow-Origin": "*"})
