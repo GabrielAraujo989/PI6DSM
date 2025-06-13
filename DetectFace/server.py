@@ -1,4 +1,3 @@
-# server.py - API para detecção facial em múltiplas câmeras
 from fastapi import FastAPI, Query, Request, HTTPException, Depends
 from pydantic import BaseModel
 import threading
@@ -8,179 +7,221 @@ import torch
 import time
 import numpy as np
 import jwt
-from typing import List
+from typing import List, Dict
 from dotenv import load_dotenv
 import os
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, Response
-from fastapi.requests import Request as FastAPIRequest
+from fastapi.responses import StreamingResponse
+import urllib.parse
 
-app = FastAPI()
+# --- Configuração Inicial ---
+app = FastAPI(
+    title="API de Detecção Facial",
+    description="Uma API para processar streams de múltiplas câmeras e detectar faces em tempo real."
+)
 
-# CORS irrestrito: permite qualquer origem, sem credenciais
+# --- Configuração de CORS (Cross-Origin Resource Sharing) ---
+# É mais seguro e compatível especificar as origens que podem acessar sua API.
+# Adicione a URL do seu frontend de produção e as URLs de desenvolvimento local.
+origins = [
+    "*"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # Não pode ser True com allow_origins=['*']
+    allow_origins=origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Carrega o modelo uma vez
+# --- Carregamento do Modelo e Configuração do Dispositivo ---
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'best.pt')
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-modelo = YOLO(MODEL_PATH).to(device)
+print(f"Usando dispositivo: {device}")
+try:
+    modelo = YOLO(MODEL_PATH).to(device)
+except Exception as e:
+    print(f"Erro ao carregar o modelo YOLO: {e}")
+    # Se o modelo não carregar, a aplicação não deve iniciar.
+    # Em um ambiente real, você pode querer um mecanismo de fallback.
+    raise
 
-# Dicionário global para armazenar o último frame de cada câmera
-frames_cameras = {}
-frames_lock = threading.Lock()
+# --- Gerenciamento de Estado Global ---
+# Armazena o frame, a contagem de faces e o status de cada câmera.
+# Estrutura: { "url_camera": {"frame": frame, "face_count": int, "status": "running|error"} }
+cameras_data: Dict[str, Dict] = {}
+frames_lock = threading.Lock() # Lock para garantir a segurança das threads
 
-# Thread para exibir todos os frames juntos
-
-def mostrar_todas_cameras():
-    while True:
+# --- Processamento da Câmera ---
+def process_camera(source_url: str, conf: float = 0.5):
+    """
+    Captura e processa o stream de uma única câmera em uma thread separada.
+    """
+    cap = cv2.VideoCapture(source_url)
+    if not cap.isOpened():
+        print(f"[ERRO] Não foi possível abrir a câmera: {source_url}")
         with frames_lock:
-            if frames_cameras:
-                # Redimensiona e empilha os frames horizontalmente
-                frames = [cv2.resize(f, (400, 300)) for f in frames_cameras.values() if f is not None]
-                if frames:
-                    painel = np.hstack(frames) if len(frames) > 1 else frames[0]
-                    cv2.imshow('Monitoramento', painel)
-        if cv2.waitKey(1) & 0xFF in [ord('q'), 27]:
-            cv2.destroyAllWindows()
+            cameras_data[source_url] = {"frame": None, "face_count": 0, "status": "error"}
+        return
+
+    while True:
+        try:
+            ret, frame = cap.read()
+            if not ret:
+                print(f"[INFO] Stream da câmera {source_url} terminou ou foi perdido.")
+                break
+
+            # A predição é feita aqui
+            resultados = modelo.predict(source=frame, conf=conf, device=device, verbose=False)
+            
+            # Pega o primeiro resultado (geralmente só há um por imagem)
+            resultado = resultados[0]
+            
+            # A contagem de faces já é obtida aqui
+            num_faces = len(resultado.boxes)
+            
+            # Desenha as detecções no frame
+            frame_processado = resultado.plot()
+            cv2.putText(frame_processado, f"Rostos: {num_faces}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            # Atualiza o dicionário global com o frame e a contagem de faces
+            with frames_lock:
+                cameras_data[source_url] = {
+                    "frame": frame_processado.copy(),
+                    "face_count": num_faces,
+                    "status": "running"
+                }
+
+        except Exception as e:
+            print(f"[ERRO] Erro no loop de processamento para {source_url}: {e}")
             break
+        
+        # Pequena pausa para não sobrecarregar a CPU
         time.sleep(0.05)
 
-# Função para processar uma câmera
-
-def process_camera(source_url, conf=0.5):
-    cap = cv2.VideoCapture(source_url)
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        resultados = modelo.predict(source=frame, conf=conf, device=device, verbose=False, stream=True)
-        for resultado in resultados:
-            faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
-            num_faces = len(faces)
-            frame_processado = resultado.plot()
-            cv2.putText(frame_processado, f"Rostos detectados: {num_faces}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2)
-            with frames_lock:
-                frames_cameras[source_url] = frame_processado.copy()
-            print(f"[{source_url}] Rostos detectados: {num_faces}")
-        time.sleep(0.1)
     cap.release()
     with frames_lock:
-        frames_cameras[source_url] = None
+        # Marca a câmera como inativa ou com erro
+        cameras_data.pop(source_url, None) # Remove a câmera da lista ativa
+    print(f"[INFO] Thread da câmera {source_url} finalizada.")
 
+
+# --- Autenticação JWT ---
 load_dotenv()
-SECRET_KEY = os.getenv("SECRET_KEY", "SUA_SECRET_KEY")
-
-# Função para verificar JWT
+SECRET_KEY = os.getenv("SECRET_KEY", "SUA_SECRET_KEY_PADRAO_SE_NAO_DEFINIDA")
 
 def verify_jwt(request: Request):
+    """
+    Verifica o token JWT no cabeçalho da requisição.
+    """
     auth = request.headers.get("Authorization")
     if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Token ausente")
+        raise HTTPException(status_code=401, detail="Token de autorização ausente ou mal formatado")
+    
     token = auth.split(" ")[1]
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         return payload
-    except Exception:
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
-# Rota para iniciar detecção em uma nova câmera
+# --- Modelos de Requisição Pydantic ---
 class CameraRequest(BaseModel):
     url: str
     conf: float = 0.5
 
-@app.post("/start_camera/")
-def start_camera(req: CameraRequest, payload=Depends(verify_jwt)):
-    print(f"[DETECTFACE] Solicitação recebida para iniciar câmera: {req.url}")
-    # Garante que a thread não será duplicada para o mesmo IP
-    if req.url not in frames_cameras:
-        t = threading.Thread(target=process_camera, args=(req.url, req.conf), daemon=True)
-        t.start()
-    # Gera um índice para a câmera recém-adicionada
-    with frames_lock:
-        keys = list(frames_cameras.keys())
-        idx = keys.index(req.url) if req.url in keys else len(keys)
-    resposta = {
-        "status": "started",
-        "camera": req.url,
-        "stream_url": f"/stream/video/{idx}",
-        "ip": req.url
-    }
-    print(f"[DETECTFACE] Resposta enviada ao frontend: {resposta}")
-    return resposta
-
-@app.get("/")
-def root():
-    return {"status": "ok", "msg": "API de detecção facial pronta para múltiplas câmeras!"}
-
-@app.on_event("startup")
-def start_monitoramento():
-    t = threading.Thread(target=mostrar_todas_cameras, daemon=True)
-    t.start()
-
 class StartCamerasRequest(BaseModel):
     camera_ips: List[str]
 
-@app.post("/start_cameras/")
-def start_cameras(req: StartCamerasRequest, payload=Depends(verify_jwt)):
-    streams = []
-    for idx, ip in enumerate(req.camera_ips):
-        t = threading.Thread(target=process_camera, args=(ip, 0.5), daemon=True)
-        t.start()
-        streams.append(f"/stream/video/{idx}")
-    return {"streams": streams}
+# --- Endpoints da API ---
 
-@app.get("/stream/video/{idx}")
-def video_stream(idx: int, payload=Depends(verify_jwt)):
-    # Aqui você pode mapear o idx para o IP real (exemplo simplificado)
-    ips = list(frames_cameras.keys())
-    if idx >= len(ips):
-        raise HTTPException(status_code=404, detail="Câmera não encontrada")
-    ip = ips[idx]
+@app.get("/", summary="Verifica o Status da API")
+def root():
+    return {"status": "ok", "message": "API de detecção facial pronta!"}
+
+@app.post("/start_camera/", summary="Inicia a detecção em uma nova câmera", dependencies=[Depends(verify_jwt)])
+def start_camera(req: CameraRequest):
+    """
+    Inicia uma nova thread para processar uma câmera se ela ainda não estiver ativa.
+    """
+    print(f"[API] Recebida solicitação para iniciar câmera: {req.url}")
+    with frames_lock:
+        if req.url in cameras_data and cameras_data[req.url].get("status") == "running":
+            raise HTTPException(status_code=400, detail="A detecção para esta câmera já está em execução.")
+
+    t = threading.Thread(target=process_camera, args=(req.url, req.conf), daemon=True)
+    t.start()
+    
+    # Codifica a URL da câmera para ser usada na URL do stream
+    encoded_url = urllib.parse.quote_plus(req.url)
+    
+    resposta = {
+        "status": "started",
+        "camera_url": req.url,
+        "stream_url": f"/video/stream?camera_url={encoded_url}"
+    }
+    print(f"[API] Resposta enviada ao frontend: {resposta}")
+    return resposta
+
+@app.get("/video/stream", summary="Fornece o stream de vídeo de uma câmera")
+def video_stream(camera_url: str = Query(...)):
+    """
+    Gera um stream de vídeo multipart para a câmera especificada.
+    Usa a URL da câmera como identificador único.
+    """
+    decoded_url = urllib.parse.unquote_plus(camera_url)
+
     def gen():
         while True:
             with frames_lock:
-                frame = frames_cameras.get(ip)
-            if frame is None:
+                cam_data = cameras_data.get(decoded_url)
+
+            if not cam_data or cam_data["frame"] is None:
+                # Se a câmera não for encontrada ou o frame for nulo, encerra o stream.
                 break
-            _, buffer = cv2.imencode('.jpg', frame)
+
+            # Codifica o frame para JPEG
+            (flag, encodedImage) = cv2.imencode(".jpg", cam_data["frame"])
+            if not flag:
+                continue
+
+            # Produz o frame para o stream
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-            time.sleep(0.1)
+                   b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
+            time.sleep(0.1) # Limita a taxa de frames
+
     return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
-# Novo endpoint para contagem de faces por IP
-
-@app.get("/faces_count")
-def faces_count(ip: str, payload=Depends(verify_jwt)):
+@app.get("/faces_count", summary="Contagem de faces por câmera", dependencies=[Depends(verify_jwt)])
+def faces_count(ip: str = Query(..., alias="camera_url")):
+    """
+    Retorna a contagem de faces para uma câmera específica de forma eficiente.
+    Não reprocessa a imagem, apenas lê o valor salvo.
+    """
     with frames_lock:
-        frame = frames_cameras.get(ip)
-    if frame is None:
-        return {"count": 0}
-    resultados = modelo.predict(source=frame, conf=0.5, device=device, verbose=False, stream=True)
-    for resultado in resultados:
-        faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
-        return {"count": len(faces)}
-    return {"count": 0}
+        cam_data = cameras_data.get(ip)
+    
+    if not cam_data:
+        return {"ip": ip, "count": 0, "status": "not_found"}
+    
+    return {"ip": ip, "count": cam_data["face_count"], "status": cam_data["status"]}
 
-@app.get("/faces_count_all")
-def faces_count_all(payload=Depends(verify_jwt)):
+@app.get("/faces_count_all", summary="Contagem de faces em todas as câmeras", dependencies=[Depends(verify_jwt)])
+def faces_count_all():
+    """
+    Retorna uma lista com a contagem de faces de todas as câmeras ativas.
+    """
     resposta = []
     with frames_lock:
-        for ip, frame in frames_cameras.items():
-            if frame is None:
-                resposta.append({"ip": ip, "count": 0})
-                continue
-            resultados = modelo.predict(source=frame, conf=0.5, device=device, verbose=False, stream=True)
-            for resultado in resultados:
-                faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
-                resposta.append({"ip": ip, "count": len(faces)})
-                break
-            else:
-                resposta.append({"ip": ip, "count": 0})
+        if not cameras_data:
+            return []
+        # Cria uma cópia para iterar com segurança
+        active_cameras = list(cameras_data.items())
+    
+    for ip, data in active_cameras:
+        resposta.append({"ip": ip, "count": data.get("face_count", 0)})
+        
     return resposta
