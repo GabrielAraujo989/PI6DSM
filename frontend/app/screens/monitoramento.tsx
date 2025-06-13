@@ -4,20 +4,12 @@ import Header from '../../components/Header';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import CameraWrapper from '../../components/CameraWrapper';
 import CameraScanner from '../../components/CameraScanner';
-//import { AuthContext } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Monitoramento() {
-  //const { user } = useContext(AuthContext);
   const navigation = useNavigation();
   const router = useRouter();
-
-    // Função para extrair o primeiro nome
-  /*const getFirstName = (fullName?: string) => {
-    if (!fullName) return '';
-    return fullName.split(' ')[0];
-  };*/
 
   const toggleDrawer = () => {
     navigation.dispatch(DrawerActions.toggleDrawer());
