@@ -31,7 +31,7 @@ export default function Welcome() {
     setLoading(true);
     try {
       await login(email, password);
-      router.push('/screens/monitoramento');
+      router.push('/screens/dashboard');
     } catch (err: any) {
       if (err?.response?.status === 401) {
         setError("E-mail ou senha incorretos.");
