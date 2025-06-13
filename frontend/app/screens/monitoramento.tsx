@@ -13,13 +13,19 @@ export default function Monitoramento() {
   const navigation = useNavigation();
   const router = useRouter();
 
+    // Função para extrair o primeiro nome
+  const getFirstName = (fullName?: string) => {
+    if (!fullName) return '';
+    return fullName.split(' ')[0];
+  };
+
   const toggleDrawer = () => {
     navigation.dispatch(DrawerActions.toggleDrawer());
   };
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Monitoramento" />
+      <Header title={`Olá${user?.name ? ", " + getFirstName(user.name) : ''}`}/>
 
       <TouchableOpacity style={{ position: 'absolute', top: 40, left: 20, zIndex: 10 }} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={28} color="#333" />
