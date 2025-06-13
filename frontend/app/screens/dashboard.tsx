@@ -26,7 +26,7 @@ export default function Welcome() {
             <Text style={styles.cardText}>28 Pessoas já identificadas</Text>
           </View>
           <View style={[styles.card, styles.blueCard]}>
-            <Text style={styles.cardText}>1 Total de pessoas ao vivo na tela</Text>
+            <Text style={styles.cardText}>1 Total de pessoas ao vivo </Text>
           </View>
         </View>
       </ScrollView>
