@@ -14,7 +14,7 @@ export class ApiService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.apiUrl = this.configService.get<string>('API_URL', 'http://localhost:8082');
+    this.apiUrl = this.configService.get<string>('API_URL');
     this.logger.log(`API Service inicializado com URL: ${this.apiUrl}`);
   }
 

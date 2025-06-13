@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const api = axios.create({
-  baseURL: Constants.expoConfig?.extra?.BASE_URL,
+  baseURL: Constants.expoConfig?.extra?.API_BASE_URL,
 });
 
 // Função auxiliar para buscar token de forma assíncrona

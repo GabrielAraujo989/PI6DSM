@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, StyleSheet, Button, Platform } from 'react-native';
 import { AuthContext } from '../contexts/AuthContext';
 import api, { detectfaceApi } from '../api/apis';
+import Constants from 'expo-constants';
 
 type CameraStream = {
   deviceId: string;
@@ -16,7 +17,7 @@ type IPCamera = {
 
 const HTTP_USERNAME = 'admin';
 const HTTP_PASSWORD = '1nf04mat!c@';
-const DETECTFACE_API = 'http://localhost:8000'; // ajuste se rodar em outro host/porta
+const DETECTFACE_API = 'https://pi-6dsm-detect-face.26nnqp.easypanel.host:8000'; // ajuste se rodar em outro host/porta
 
 export default function CameraWrapper() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -118,8 +119,9 @@ export default function CameraWrapper() {
   // Função para buscar contagem de faces de todas as câmeras
   useEffect(() => {
     if (!jwt) return;
+    const detectfaceBaseUrl = Constants.expoConfig?.extra?.DETECTFACE_BASE_URL || DETECTFACE_API;
     const interval = setInterval(() => {
-      fetch(`${process.env.DETECTFACE_BASE_URL || DETECTFACE_API}/faces_count_all`, {
+      fetch(`${detectfaceBaseUrl}/faces_count_all`, {
         headers: { 'Authorization': `Bearer ${jwt}` }
       })
         .then(res => res.json())
