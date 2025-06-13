@@ -13,8 +13,8 @@ function DrawerLayoutInner() {
         drawerPosition: 'right', // Garante que o Drawer abre à direita
       }}
     >
-      <Drawer.Screen name="dashboard" options={{ title: "Início" }} />
       <Drawer.Screen name="monitoramento" options={{ title: "Monitoramento" }} />
+      <Drawer.Screen name="dashboard" options={{ title: "Início" }} />      
       {(user?.role === 'ADMIN' || user?.role === 'SUPER_USER') && (
         <Drawer.Screen name="users" options={{ title: "Usuários" }} />
       )}
