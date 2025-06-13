@@ -24,7 +24,11 @@ app = FastAPI(
 # É mais seguro e compatível especificar as origens que podem acessar sua API.
 # Adicione a URL do seu frontend de produção e as URLs de desenvolvimento local.
 origins = [
-    "*"
+    "https://pi-6dsm-pi-6dsm-frontend.26nnqp.easypanel.host", # Sua URL de produção
+    "https://pi-6dsm-pi-6dsm-service.26nnqp.easypanel.host",
+    "http://localhost:3000", # Exemplo para React
+    "http://localhost:8080", # Exemplo para Vue/Angular
+    "http://127.0.0.1:5500", # Exemplo para Live Server
 ]
 
 app.add_middleware(
