@@ -9,7 +9,7 @@ import Header from '../../components/Header';
 import { AuthContext } from '../../contexts/AuthContext';
 
 export default function Welcome() {
-  const { user } = useContext(AuthContext);
+  //const { user } = useContext(AuthContext);
 
   // Função para extrair o primeiro nome
   const getFirstName = (fullName?: string) => {
