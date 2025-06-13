@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Monitoramento() {
+  const { user } = useContext(AuthContext);
   const navigation = useNavigation();
   const router = useRouter();
 
