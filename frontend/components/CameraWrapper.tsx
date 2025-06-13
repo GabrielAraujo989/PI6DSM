@@ -102,31 +102,38 @@ export default function CameraWrapper() {
   // Função para buscar contagem de faces (via polling simples)
   useEffect(() => {
     if (!jwt) return;
+    let isMounted = true;
     const interval = setInterval(() => {
+      if (!isMounted) return;
       ipCameras.forEach(cam => {
         fetch(`${DETECTFACE_API}/faces_count?ip=${cam.ip}`, {
           headers: { 'Authorization': `Bearer ${jwt}` }
         })
           .then(res => res.json())
           .then(data => {
-            setFaceCounts(prev => ({ ...prev, [cam.ip]: data.count }));
+            if (isMounted) setFaceCounts(prev => ({ ...prev, [cam.ip]: data.count }));
           });
       });
     }, 2000);
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [ipCameras, jwt]);
 
   // Função para buscar contagem de faces de todas as câmeras
   useEffect(() => {
     if (!jwt) return;
+    let isMounted = true;
     const detectfaceBaseUrl = Constants.expoConfig?.extra?.DETECTFACE_BASE_URL || DETECTFACE_API;
     const interval = setInterval(() => {
+      if (!isMounted) return;
       fetch(`${detectfaceBaseUrl}/faces_count_all`, {
         headers: { 'Authorization': `Bearer ${jwt}` }
       })
         .then(res => res.json())
         .then((data: {ip: string, count: number}[]) => {
-          if (Array.isArray(data)) {
+          if (Array.isArray(data) && isMounted) {
             const counts: {[ip: string]: number} = {};
             data.forEach(item => {
               counts[item.ip] = item.count;
@@ -135,7 +142,10 @@ export default function CameraWrapper() {
           }
         });
     }, 2000);
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [ipCameras, jwt]);
 
   const toggleCamera = async (deviceId: string, checked: boolean) => {
