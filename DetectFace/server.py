@@ -12,6 +12,8 @@ from typing import List
 from dotenv import load_dotenv
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, JSONResponse, Response
+from fastapi.requests import Request as FastAPIRequest
 
 app = FastAPI()
 
@@ -133,7 +135,15 @@ def start_cameras(req: StartCamerasRequest, payload=Depends(verify_jwt)):
         streams.append(f"/stream/video/{idx}")
     return {"streams": streams}
 
-from fastapi.responses import StreamingResponse, JSONResponse
+# Handler global para OPTIONS (preflight CORS)
+@app.options("/{rest_of_path:path}")
+def preflight_handler(rest_of_path: str, request: FastAPIRequest):
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    return Response(status_code=204, headers=headers)
 
 @app.get("/stream/video/{idx}")
 def video_stream(idx: int, payload=Depends(verify_jwt)):
@@ -152,7 +162,11 @@ def video_stream(idx: int, payload=Depends(verify_jwt)):
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
             time.sleep(0.1)
-    headers = {"Access-Control-Allow-Origin": "*"}
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
     return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame", headers=headers)
 
 # Novo endpoint para contagem de faces por IP
@@ -161,18 +175,27 @@ def video_stream(idx: int, payload=Depends(verify_jwt)):
 def faces_count(ip: str, payload=Depends(verify_jwt)):
     with frames_lock:
         frame = frames_cameras.get(ip)
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
     if frame is None:
-        return JSONResponse({"count": 0}, headers={"Access-Control-Allow-Origin": "*"})
-    # Detecta faces no último frame processado
+        return JSONResponse({"count": 0}, headers=headers)
     resultados = modelo.predict(source=frame, conf=0.5, device=device, verbose=False, stream=True)
     for resultado in resultados:
         faces = resultado.boxes.xyxy.cpu().numpy() if hasattr(resultado.boxes, 'xyxy') else []
-        return JSONResponse({"count": len(faces)}, headers={"Access-Control-Allow-Origin": "*"})
-    return JSONResponse({"count": 0}, headers={"Access-Control-Allow-Origin": "*"})
+        return JSONResponse({"count": len(faces)}, headers=headers)
+    return JSONResponse({"count": 0}, headers=headers)
 
 @app.get("/faces_count_all")
 def faces_count_all(payload=Depends(verify_jwt)):
     resposta = []
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
     with frames_lock:
         for ip, frame in frames_cameras.items():
             if frame is None:
@@ -185,4 +208,4 @@ def faces_count_all(payload=Depends(verify_jwt)):
                 break
             else:
                 resposta.append({"ip": ip, "count": 0})
-    return JSONResponse(resposta, headers={"Access-Control-Allow-Origin": "*"})
+    return JSONResponse(resposta, headers=headers)
