@@ -17,7 +17,7 @@ export default function Monitoramento() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title={`Olá${user?.name ? ", " + getFirstName(user.name) : ''}`}/>
+      <Header title="Monitoramento" />
 
       <TouchableOpacity style={{ position: 'absolute', top: 40, left: 20, zIndex: 10 }} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={28} color="#333" />
