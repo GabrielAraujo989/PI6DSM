@@ -17,7 +17,7 @@ type IPCamera = {
 };
 
 
-const DETECTFACE_API = 'https://pi-6dsm-detect-face.26nnqp.easypanel.host:8000'; // ajuste se rodar em outro host/porta
+const DETECTFACE_API = 'https://pi-6dsm-detect-face.26nnqp.easypanel.host'; // ajuste se rodar em outro host/porta
 
 export default function CameraWrapper() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
