@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, {useEffect, useState, useContext, useRef} from 'react';
 import { View, Text, StyleSheet, Button, Platform } from 'react-native';
 import { AuthContext } from '../contexts/AuthContext';
 import api, { detectfaceApi } from '../api/apis';
@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 type CameraStream = {
   deviceId: string;
   stream: MediaStream;
+  frameProcessor?: any
 };
 
 type IPCamera = {
@@ -15,8 +16,7 @@ type IPCamera = {
   type: string;
 };
 
-const HTTP_USERNAME = 'admin';
-const HTTP_PASSWORD = '1nf04mat!c@';
+
 const DETECTFACE_API = 'https://pi-6dsm-detect-face.26nnqp.easypanel.host:8000'; // ajuste se rodar em outro host/porta
 
 export default function CameraWrapper() {
@@ -31,6 +31,8 @@ export default function CameraWrapper() {
 
   const [usbOpen, setUsbOpen] = useState<boolean>(true);
   const [ipOpen, setIpOpen] = useState<boolean>(true);
+
+  const videoRefs = useRef<{[key: string]: HTMLVideoElement | null}>([]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -99,6 +101,111 @@ export default function CameraWrapper() {
     });
   };
 
+    const startFrameProcessor = (deviceId: string, stream: MediaStream) => {
+        console.log(`Iniciando processador para câmera: ${deviceId}`);
+
+        // Aguardamos a referência ao elemento de vídeo estar disponível
+        const checkVideoRef = () => {
+            const videoElement = videoRefs.current[deviceId];
+            if (!videoElement) {
+                console.log(`Video ref ainda não disponível para ${deviceId}, tentando novamente em 200ms`);
+                setTimeout(checkVideoRef, 200);
+                return;
+            }
+
+            console.log(`Video ref obtido para ${deviceId}, dimensões: ${videoElement.videoWidth}x${videoElement.videoHeight}`);
+            initializeProcessing(videoElement);
+        };
+
+        const initializeProcessing = (videoElement: HTMLVideoElement) => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            if (!context) {
+                console.error(`Não foi possível obter contexto 2D do canvas para ${deviceId}`);
+                return;
+            }
+
+            const startCapture = () => {
+                console.log(`Iniciando captura para ${deviceId}`);
+                const interval = setInterval(async () => {
+                    if (!videoElement || videoElement.paused || videoElement.ended) {
+                        console.log(`Vídeo pausado ou finalizado para ${deviceId}, parando processador`);
+                        clearInterval(interval);
+                        return;
+                    }
+
+                    try {
+                        // Desenha o frame atual no canvas
+                        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                        // Converte para blob
+                        const blob = await new Promise<Blob>((resolve, reject) => {
+                            canvas.toBlob((b) => {
+                                if (b) resolve(b);
+                                else reject(new Error("Falha ao converter canvas para blob"));
+                            }, 'image/jpeg', 0.8);
+                        });
+
+                        // Envia para o backend
+                        const formData = new FormData();
+                        formData.append('frame', blob, 'frame.jpg');
+
+                        const response = await fetch(`${DETECTFACE_API}/process_usb_frame/`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${jwt}`
+                            },
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Erro HTTP: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        console.log(`Faces detectadas para ${deviceId}: ${result.face_count}`);
+
+                        // Atualiza a contagem de faces para esta câmera
+                        setFaceCounts(prev => ({
+                            ...prev,
+                            [deviceId]: result.face_count
+                        }));
+
+                    } catch (error) {
+                        console.error(`Erro ao processar frame da câmera USB ${deviceId}:`, error);
+                    }
+                }, 500); // Reduzido para 2 frames por segundo para diminuir a carga
+
+                // Armazena a referência do intervalo na câmera
+                setActiveCameras(prev =>
+                    prev.map(cam =>
+                        cam.deviceId === deviceId
+                            ? {...cam, frameProcessor: interval}
+                            : cam
+                    )
+                );
+            };
+
+            // Aguardamos o vídeo estar pronto para configurar as dimensões
+            if (!videoElement.videoWidth) {
+                console.log(`Aguardando dimensões do vídeo para ${deviceId}`);
+                videoElement.addEventListener('loadedmetadata', () => {
+                    canvas.width = videoElement.videoWidth;
+                    canvas.height = videoElement.videoHeight;
+                    console.log(`Dimensões definidas: ${canvas.width}x${canvas.height}`);
+                    startCapture();
+                });
+            } else {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                startCapture();
+            }
+        };
+
+        // Iniciamos a verificação
+        checkVideoRef();
+    };
+
   // Função para iniciar detecção em múltiplas câmeras selecionadas (nova rota DetectFace)
   const startDetectFaceMultiple = async () => {
     if (!jwt || selectedIPStreams.length === 0) return;
@@ -134,51 +241,56 @@ export default function CameraWrapper() {
     };
   }, [ipCameras, jwt]);
 
-  // Função para buscar contagem de faces de todas as câmeras
-  useEffect(() => {
-    if (!jwt) return;
-    let isMounted = true;
-    const detectfaceBaseUrl = Constants.expoConfig?.extra?.DETECTFACE_BASE_URL || DETECTFACE_API;
-    const interval = setInterval(() => {
-      if (!isMounted) return;
-      fetch(`${detectfaceBaseUrl}/faces_count_all`, {
-        headers: { 'Authorization': `Bearer ${jwt}` }
-      })
-        .then(res => res.json())
-        .then((data: {ip: string, count: number}[]) => {
-          if (Array.isArray(data) && isMounted) {
-            const counts: {[ip: string]: number} = {};
-            data.forEach(item => {
-              counts[item.ip] = item.count;
-            });
-            setFaceCounts(counts);
-          }
-        });
-    }, 2000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [ipCameras, jwt]);
+    const toggleCamera = async (deviceId: string, checked: boolean) => {
+        if (checked) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({video: {deviceId}});
 
-  const toggleCamera = async (deviceId: string, checked: boolean) => {
-    if (checked) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId } });
-        setActiveCameras((prev) => [...prev, { deviceId, stream }]);
-      } catch (err) {
-        alert('Erro ao acessar a câmera: ' + err);
-      }
-    } else {
-      setActiveCameras((prev) => {
-        const camToRemove = prev.find(c => c.deviceId === deviceId);
-        if (camToRemove) {
-          camToRemove.stream.getTracks().forEach(track => track.stop());
+                // Adicionamos a câmera e depois iniciamos a detecção
+                console.log(`Ativando câmera: ${deviceId}`);
+
+                // Adicionamos e obtemos a referência imediatamente
+                setActiveCameras((prev) => {
+                    const newCameras = [...prev, {deviceId, stream}];
+                    console.log(`Câmeras ativas atualizadas:`, newCameras.map(c => c.deviceId));
+
+                    // Precisamos esperar o DOM atualizar antes de iniciar a detecção
+                    // para que videoRefs.current[deviceId] esteja disponível
+                    setTimeout(() => {
+                        console.log(`Iniciando detecção para: ${deviceId}`);
+                        startFrameProcessor(deviceId, stream);
+                    }, 500);
+
+                    return newCameras;
+                });
+
+            } catch (err) {
+                alert('Erro ao acessar a câmera: ' + err);
+            }
+        } else {
+            setActiveCameras((prev) => {
+                const camToRemove = prev.find(c => c.deviceId === deviceId);
+                if (camToRemove) {
+                    // Para o processador de frames se existir
+                    if (camToRemove.frameProcessor) {
+                        clearInterval(camToRemove.frameProcessor);
+                    }
+
+                    // Para os tracks da stream
+                    camToRemove.stream.getTracks().forEach(track => track.stop());
+                }
+                return prev.filter(c => c.deviceId !== deviceId);
+            });
+
+            // Remove a contagem de faces para esta câmera
+            setFaceCounts(prev => {
+                const newCounts = {...prev};
+                delete newCounts[deviceId];
+                return newCounts;
+            });
         }
-        return prev.filter(c => c.deviceId !== deviceId);
-      });
-    }
-  };
+    };
+
 
   const toggleIPCamera = (ip: string, checked: boolean) => {
     if (checked) {
@@ -188,12 +300,18 @@ export default function CameraWrapper() {
     }
   };
 
-  const selectAllUSB = () => {
-    cameras.forEach(cam => {
-      const isChecked = activeCameras.some(c => c.deviceId === cam.deviceId);
-      if (!isChecked) toggleCamera(cam.deviceId, true);
-    });
-  };
+    const selectAllUSB = () => {
+        // Para cada câmera disponível
+        cameras.forEach(async (cam) => {
+            const isChecked = activeCameras.some((c) => c.deviceId === cam.deviceId);
+            if (!isChecked) {
+                console.log(`Selecionando câmera ${cam.deviceId}`);
+                await toggleCamera(cam.deviceId, true);
+                // Adicionamos um pequeno delay entre cada ativação para evitar sobrecarga
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        });
+    };
 
   const deselectAllUSB = () => {
     activeCameras.forEach(cam => toggleCamera(cam.deviceId, false));
@@ -245,21 +363,74 @@ export default function CameraWrapper() {
     <View style={styles.container}>
       {/* ✅ Vídeos no topo */}
       <View style={styles.videosContainer}>
-        {activeCameras.map(({ deviceId, stream }) => (
-          <video
-            key={deviceId}
-            autoPlay
-            playsInline
-            muted
-            style={styles.video}
-            ref={(video) => {
-              if (video && video.srcObject !== stream) {
-                video.srcObject = stream;
-              }
-            }}
-          />
-        ))}
+          {activeCameras.map(({deviceId, stream}) => (
+              <div key={deviceId} style={{position: 'relative', margin: 10}}>
+                  <video
+                      key={deviceId}
+                      autoPlay
+                      playsInline
+                      muted
+                      style={styles.video}
+                      ref={(video) => {
+                          if (video) {
+                              // Sempre atualizamos a referência
+                              videoRefs.current[deviceId] = video;
 
+                              // Só configuramos o srcObject se for diferente
+                              if (video.srcObject !== stream) {
+                                  console.log(`Definindo srcObject para vídeo ${deviceId}`);
+                                  video.srcObject = stream;
+                              }
+                          }
+                      }}
+                      onLoadedMetadata={() => {
+                          console.log(`Vídeo ${deviceId} carregado, dimensões: ${videoRefs.current[deviceId]?.videoWidth}x${videoRefs.current[deviceId]?.videoHeight}`);
+                      }}
+                  />
+                  <Text style={{
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      position: 'absolute',
+                      bottom: 10,
+                      left: 10,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      padding: 5,
+                      borderRadius: 5
+                  }}>
+                      Rostos detectados: {faceCounts[deviceId] ?? 0}
+                  </Text>
+                  <button
+                      style={{
+                          position: 'absolute',
+                          top: 10,
+                          right: 10,
+                          padding: '4px 12px',
+                          borderRadius: 6,
+                          background: '#3498db',
+                          color: '#fff',
+                          border: 'none',
+                          cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                          console.log(`Reiniciando detecção para ${deviceId}`);
+                          // Busca a câmera atual
+                          const activeCamera = activeCameras.find(c => c.deviceId === deviceId);
+                          if (activeCamera) {
+                              // Para o processador atual se existir
+                              if (activeCamera.frameProcessor) {
+                                  clearInterval(activeCamera.frameProcessor);
+                              }
+                              // Inicia novo processador
+                              startFrameProcessor(deviceId, activeCamera.stream);
+                          } else {
+                              console.error(`Câmera ${deviceId} não encontrada para reiniciar detecção`);
+                          }
+                      }}
+                  >
+                      Reiniciar Detecção
+                  </button>
+              </div>
+          ))}
         {selectedIPStreams.map((ip, idx) => (
           <View key={ip} style={{ margin: 10 }}>
             <img
