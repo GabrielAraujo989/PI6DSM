@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Request, HTTPException, Depends
+from fastapi import FastAPI, Query, Request, HTTPException, Depends, File, UploadFile
 from pydantic import BaseModel
 import threading
 import cv2
@@ -13,6 +13,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import urllib.parse
+import io
 
 # --- Configuração Inicial ---
 app = FastAPI(
@@ -33,7 +34,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todas as origens, mas é recomendado restringir a produção
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -233,6 +234,39 @@ def faces_count(ip: str = Query(..., alias="camera_url")):
         return {"ip": ip, "count": 0, "status": "not_found"}
     
     return {"ip": ip, "count": cam_data["face_count"], "status": cam_data["status"]}
+
+
+@app.post("/process_usb_frame/", summary="Processa um frame de câmera USB", dependencies=[Depends(verify_jwt)])
+async def process_usb_frame(frame: UploadFile = File(...)):
+    """
+    Recebe um frame da câmera USB, processa para detecção facial e retorna o resultado.
+    """
+    try:
+        contents = await frame.read()
+
+        # Converte para formato numpy
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if img is None:
+            raise HTTPException(status_code=400, detail="Imagem inválida")
+
+        # Processa a imagem com o modelo YOLO
+        resultados = modelo.predict(source=img, conf=0.5, device=device, verbose=False)
+
+        # Pega o primeiro resultado
+        resultado = resultados[0]
+
+        num_faces = len(resultado.boxes)
+
+        return {
+            "face_count": num_faces,
+            "status": "success"
+        }
+
+    except Exception as e:
+        print(f"[ERRO] Erro ao processar frame USB: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/faces_count_all", summary="Contagem de faces em todas as câmeras", dependencies=[Depends(verify_jwt)])
 def faces_count_all():
