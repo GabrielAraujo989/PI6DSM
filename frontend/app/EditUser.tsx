@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -9,14 +9,18 @@ import {
   Alert,
   ScrollView
 } from "react-native";
-import Header from '../../components/Header';
+import Header from '../components/Header';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { AuthContext } from '../contexts/AuthContext';
+import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function Cadastro() {
+export default function EditUser() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { user } = useContext(AuthContext);
 
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
@@ -25,26 +29,31 @@ export default function Cadastro() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [imagem, setImagem] = useState<string | null>(null);
-  const [perfil, setPerfil] = useState('padrao');
+  const [perfil, setPerfil] = useState('CLIENT');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [id, setId] = useState<string | null>(null);
-  const [modoEdicao, setModoEdicao] = useState(false);
 
   useEffect(() => {
-    if (params && params.pessoa) {
-      const pessoa = JSON.parse(params.pessoa as string);
-      setNome(pessoa.nome);
-      setCpf(pessoa.cpf);
-      setEmail(pessoa.email);
-      setSenha(pessoa.password);
-      setConfirmarSenha(pessoa.password);
-      setDataNascimento(pessoa.dataNascimento);
-      setImagem(pessoa.foto || null);
-      setId(pessoa.id);
-      setModoEdicao(true);
+    const pessoa = params && params.pessoa ? JSON.parse(params.pessoa as string) : null;
+    if (pessoa) {
+      setNome(pessoa.nome || pessoa.name || '');
+      setCpf(pessoa.cpf || '');
+      setEmail(pessoa.email || '');
+      setSenha('');
+      setConfirmarSenha('');
+      setDataNascimento(pessoa.dataNascimento || pessoa.birthDate || '');
+      setImagem(pessoa.foto || pessoa.photoUrl || null);
+      setId(pessoa.id || null);
+      setPerfil(pessoa.role || 'CLIENT');
     }
-  }, [params]);
+  }, [params?.pessoa]);
+
+  // Opções de perfil de acordo com a hierarquia
+  let perfilOptions = [{ label: 'Cliente', value: 'CLIENT' }];
+  if (user?.role === 'SUPER_USER') {
+    perfilOptions.push({ label: 'Administrador', value: 'ADMIN' });
+  }
 
   const aplicarMascaraCPF = (cpf: string): string => {
     cpf = cpf.replace(/\D/g, '').slice(0, 11);
@@ -54,29 +63,29 @@ export default function Cadastro() {
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
   };
   const aplicarMascaraData = (data: string): string => {
-  data = data.replace(/\D/g, '').slice(0, 8); // Só números, até 8 dígitos
-  if (data.length >= 5) {
-    return data.replace(/(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3');
-  } else if (data.length >= 3) {
-    return data.replace(/(\d{2})(\d{1,2})/, '$1/$2');
-  } else {
-    return data;
-  }
-};
-const validarEmail = (email: string): boolean => {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
-};
-const validarCPF = (cpf: string): boolean => {
+    data = data.replace(/\D/g, '').slice(0, 8);
+    if (data.length >= 5) {
+      return data.replace(/(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3');
+    } else if (data.length >= 3) {
+      return data.replace(/(\d{2})(\d{1,2})/, '$1/$2');
+    } else {
+      return data;
+    }
+  };
+  const validarEmail = (email: string): boolean => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+  const validarCPF = (cpf: string): boolean => {
     return cpf.replace(/\D/g, '').length === 11;
-};
-const validarData = (data: string): boolean => {
+  };
+  const validarData = (data: string): boolean => {
     return /^\d{2}\/\d{2}\/\d{4}$/.test(data);
-};
+  };
 
-  const handleRegister = async () => {
+  const handleEdit = async () => {
     setError("");
-    if (!nome || !cpf || !email || !senha || !confirmarSenha || !dataNascimento) {
+    if (!nome || !cpf || !email || !dataNascimento) {
       setError("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -92,39 +101,30 @@ const validarData = (data: string): boolean => {
       setError("Data de nascimento inválida.");
       return;
     }
-    if (senha.length < 6) {
+    if (senha && senha.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
-    if (senha !== confirmarSenha) {
+    if (senha && senha !== confirmarSenha) {
       setError("As senhas não coincidem.");
       return;
     }
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8081/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: nome,
-          cpf: cpf.replace(/\D/g, ''),
-          email,
-          password: senha,
-          birthDate: dataNascimento.split('/').reverse().join('-'),
-          role: perfil === 'admin' ? 'ADMIN' : 'CLIENT',
-          photoUrl: imagem,
-        })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.message || 'Erro ao cadastrar usuário.');
-        setLoading(false);
-        return;
-      }
-      Alert.alert('Sucesso', 'Cadastro realizado!');
-      router.push('/screens/login');
-    } catch (err) {
-      setError('Erro de conexão com o servidor.');
+      const updateData: any = {
+        name: nome,
+        cpf: cpf.replace(/\D/g, ''),
+        email,
+        birthDate: dataNascimento.split('/').reverse().join('-'),
+        role: perfil,
+        photoUrl: imagem,
+      };
+      if (senha) updateData.password = senha;
+      await api.patch(`/users/${id}`, updateData);
+      Alert.alert('Sucesso', 'Usuário atualizado!');
+      router.back();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Erro ao atualizar usuário.');
     } finally {
       setLoading(false);
     }
@@ -137,39 +137,17 @@ const validarData = (data: string): boolean => {
       aspect: [1, 1],
       quality: 1,
     });
-
     if (!resultado.canceled) {
       setImagem(resultado.assets[0].uri);
     }
   };
 
-  const handleSalvar = () => {
-    if (senha !== confirmarSenha) {
-      Alert.alert('Erro', 'As senhas não coincidem.');
-      return;
-    }
-
-    const novoCadastro = {
-      id: id || Date.now().toString(),
-      nome,
-      cpf,
-      email,
-      password: senha,
-      dataNascimento,
-      foto: imagem,
-      perfil,
-    };
-
-    if (params.salvarCadastro) {
-      const callback = eval(params.salvarCadastro as string);
-      callback(novoCadastro);
-    }
-    router.back();
-  };
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Header title="Cadastro" />
+      <TouchableOpacity style={{ position: 'absolute', top: 40, left: 20, zIndex: 10 }} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={28} color="#333" />
+      </TouchableOpacity>
+      <Header title="Editar Usuário" />
       <View style={styles.textInput}>
         <TextInput placeholder="Nome completo" style={styles.input} value={nome} onChangeText={setNome} />
         <TextInput
@@ -194,31 +172,33 @@ const validarData = (data: string): boolean => {
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        <TextInput placeholder="Senha" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
-        <TextInput placeholder="Confirmar senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
-
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={perfil}
-            onValueChange={(itemValue) => setPerfil(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Padrão" value="padrao" />
-            <Picker.Item label="Administrador" value="admin" />
-          </Picker>
-        </View>
-
+        <TextInput placeholder="Nova senha (opcional)" style={styles.input} value={senha} onChangeText={setSenha} secureTextEntry />
+        <TextInput placeholder="Confirmar nova senha" style={styles.input} value={confirmarSenha} onChangeText={setConfirmarSenha} secureTextEntry />
+        {/* Picker de perfil só aparece para SUPER_USER */}
+        {user?.role === 'SUPER_USER' && (
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={perfil}
+              onValueChange={(itemValue) => setPerfil(itemValue)}
+              style={styles.picker}
+              enabled={true}
+            >
+              {perfilOptions.map(opt => (
+                <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+              ))}
+            </Picker>
+          </View>
+        )}
         <TouchableOpacity style={styles.uploadBtn} onPress={escolherImagem}>
           <Text style={styles.uploadText}>Selecionar imagem</Text>
         </TouchableOpacity>
         {imagem && <Image source={{ uri: imagem }} style={styles.imagem} />}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <TouchableOpacity style={[styles.button, loading && { opacity: 0.7 }]} onPress={handleRegister} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Cadastrando...' : 'Cadastrar'}</Text>
+        <TouchableOpacity style={[styles.button, loading && { opacity: 0.7 }]} onPress={handleEdit} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? 'Salvando...' : 'Salvar Alterações'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buttonCadastro} onPress={() => router.push('/screens/login')}>
-          <Text style={styles.buttonCad}>Já tem uma conta? Faça login</Text>
+        <TouchableOpacity style={styles.buttonCadastro} onPress={() => router.back()}>
+          <Text style={styles.buttonCad}>Cancelar</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -232,11 +212,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-  },
-  titulo: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
   },
   textInput: {
     marginTop: 20,

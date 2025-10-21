@@ -1,0 +1,14 @@
+opencv-python~=4.11.0.86
+ultralytics~=8.3.117
+
+torch~=2.7.0
+fastapi
+uvicorn
+fastapi
+python-dotenv
+opencv-python-headless
+pydantic
+python-jose
+pyjwt
+
+python-multipart

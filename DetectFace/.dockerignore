@@ -10,12 +10,6 @@ __pycache__/
 *.jpeg
 *.png
 *.onnx
-*.pt
-.DS_Store
-.env
-.idea/
-.vscode/
-*.ipynb_checkpoints/
 # Não subir modelos grandes nem arquivos de vídeo/imagem de teste
 yolo11s.pt
 exemplo1.mp4

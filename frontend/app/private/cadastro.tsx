@@ -1,0 +1,3 @@
+// ...existing code from /home/gabriel/PI6DSM/frontend/app/screens/cadastro.tsx...
+
+export default function Cadastro() { return null; }

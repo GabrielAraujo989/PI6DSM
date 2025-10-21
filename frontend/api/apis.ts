@@ -2,8 +2,14 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// API principal (autenticação, usuários, etc)
 const api = axios.create({
   baseURL: Constants.expoConfig?.extra?.API_BASE_URL,
+});
+
+// DetectFace API (câmeras)
+export const detectfaceApi = axios.create({
+  baseURL: Constants.expoConfig?.extra?.DETECTFACE_BASE_URL,
 });
 
 // Função auxiliar para buscar token de forma assíncrona
@@ -15,7 +21,7 @@ async function getTokenUniversal() {
   }
 }
 
-// Interceptor síncrono, mas injeta o token se já estiver no localStorage (web)
+// Interceptor para API principal
 api.interceptors.request.use((config) => {
   let token = null;
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -24,7 +30,19 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
-  // Para mobile, o token deve ser adicionado manualmente nas chamadas (ou use contexto)
+  return config;
+});
+
+// Interceptor para DetectFace API
+// (opcional, se quiser autenticação JWT também nas rotas de câmera)
+detectfaceApi.interceptors.request.use((config) => {
+  let token = null;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    token = window.localStorage.getItem('token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
   return config;
 });
 

@@ -30,8 +30,21 @@ let UserController = class UserController {
     create(createUserDto) {
         return this.userService.create(createUserDto);
     }
-    findAll() {
-        return this.userService.findAll();
+    findAll(req) {
+        const user = req.user;
+        if (user.role === user_entity_1.UserRole.SUPER_USER) {
+            return this.userService.findAll();
+        }
+        else if (user.role === user_entity_1.UserRole.ADMIN) {
+            return this.userService.findAllClients();
+        }
+        else {
+            return [];
+        }
+    }
+    getProfile(req) {
+        const user = req.user;
+        return this.userService.findOne(user.id);
     }
     findOne(id) {
         return this.userService.findOne(id);
@@ -64,10 +77,19 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Get)(),
     (0, roles_decorator_1.Roles)(user_entity_1.UserRole.SUPER_USER, user_entity_1.UserRole.ADMIN),
+    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('profile'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UserController.prototype, "getProfile", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Get)(':id'),

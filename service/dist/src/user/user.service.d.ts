@@ -8,6 +8,7 @@ export declare class UserService {
     constructor(userRepository: Repository<User>, encryptionService: EncryptionService);
     create(createUserDto: CreateUserDto): Promise<User>;
     findAll(): Promise<User[]>;
+    findAllClients(): Promise<User[]>;
     findOne(id: string): Promise<User>;
     findByEmail(email: string): Promise<User>;
     update(id: string, updateUserDto: Partial<CreateUserDto>): Promise<User>;

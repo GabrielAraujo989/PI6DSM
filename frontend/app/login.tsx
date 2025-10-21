@@ -10,9 +10,9 @@ import {
   Alert
 } from "react-native";
 import { useRouter } from 'expo-router';
-import { login } from '../../api/authApi';
-import { AuthContext } from '../../contexts/AuthContext';
-import { saveToken, getToken } from '../../service/storage';
+import { login } from '../api/authApi';
+import { AuthContext } from '../contexts/AuthContext';
+import { saveToken, getToken } from '../service/storage';
 import * as Animatable from 'react-native-animatable';
 
 export default function Welcome() {
@@ -47,14 +47,14 @@ export default function Welcome() {
 
   return (
     <ImageBackground
-      source={require('../../assets/images/fundo.png')}
+      source={require('../assets/images/fundo.png')}
       style={styles.container}
       resizeMode="cover"
     >
       <View style={styles.containerLogo}>
         <Animatable.Image
           animation="flipInY"
-          source={require('../../assets/images/fundo2.png')}
+          source={require('../assets/images/fundo2.png')}
           style={{ width: '100%' }}
           resizeMode="contain"
         />
@@ -91,7 +91,7 @@ export default function Welcome() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.buttonCadastro}
-            onPress={() => router.push('/screens/cadastro')}
+            onPress={() => router.push('/cadastro')}
           >
             <Text style={styles.buttonCad}>Não tem uma conta? Cadastre-se</Text>
           </TouchableOpacity>

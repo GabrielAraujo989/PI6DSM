@@ -57,6 +57,10 @@ let UserService = class UserService {
         const users = await this.userRepository.find();
         return this.decryptUsers(users);
     }
+    async findAllClients() {
+        const users = await this.userRepository.find({ where: { role: user_entity_2.UserRole.CLIENT } });
+        return this.decryptUsers(users);
+    }
     async findOne(id) {
         const user = await this.userRepository.findOne({ where: { id } });
         if (!user)

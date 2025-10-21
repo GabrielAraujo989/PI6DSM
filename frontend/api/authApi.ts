@@ -1,4 +1,4 @@
-import api from './axios';
+import api from './apis';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const login = async (email: string, password: string) => {

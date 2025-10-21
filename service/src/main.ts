@@ -13,7 +13,7 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
   // Usa PORT da env, senão API_PORT, senão 8082
-  const port = configService.get<number>('PORT') || configService.get<number>('API_PORT') || 8082;
+  const port = configService.get<number>('PORT') || configService.get<number>('API_PORT') || 8081;
   const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
   // Configurações de segurança

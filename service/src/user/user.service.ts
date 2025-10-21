@@ -60,6 +60,11 @@ export class UserService {
     return this.decryptUsers(users);
   }
 
+  async findAllClients(): Promise<User[]> {
+    const users = await this.userRepository.find({ where: { role: UserRole.CLIENT } });
+    return this.decryptUsers(users);
+  }
+
   async findOne(id: string): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) return null;
