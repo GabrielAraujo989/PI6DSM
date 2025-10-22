@@ -1,10 +1,12 @@
 opencv-python~=4.11.0.86
 ultralytics~=8.3.117
 
+# Torch versão alinhada ao ultralytics (verificar compatibilidade com CUDA/CPU no deploy)
 torch~=2.7.0
+
 fastapi
-uvicorn
-fastapi
+uvicorn[standard]
+gunicorn
 python-dotenv
 opencv-python-headless
 pydantic
