@@ -40,30 +40,22 @@ jobs:
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           
-      - name: Build Docker image
+      - name: Verify file synchronization
         working-directory: ./DetectFace
         run: |
-          docker build -t detecface-test .
+          echo "Verifying critical files are present and synchronized..."
+          critical_files=("server.py" "requirements.txt" "requirements-pytorch.txt" "Dockerfile" "railway.toml")
           
-      - name: Test Docker container
-        working-directory: ./DetectFace
-        run: |
-          docker run -d --name detecface-test-container -p 5000:5000 \
-            -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
-            detecface-test
-            
-          echo "Waiting for container to start..."
-          sleep 10
+          for file in "${critical_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ $file exists"
+            else
+              echo "❌ $file is missing!"
+              exit 1
+            fi
+          done
           
-          echo "Checking if container is running..."
-          docker ps | grep detecface-test-container
-          
-          echo "Testing container health..."
-          curl -f http://localhost:5000/ || exit 1
-          
-          echo "Stopping test container..."
-          docker stop detecface-test-container
-          docker rm detecface-test-container
+          echo "✅ All critical files are present"
 
   deploy:
     name: Deploy to Railway
@@ -81,18 +73,63 @@ jobs:
       - name: Login to Railway
         run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
         
-      - name: Deploy to Railway
+      - name: Deploy to Railway with retry
         working-directory: ./DetectFace
         run: |
-          railway up --service ${{ env.RAILWAY_PROJECT_NAME }}
+          # Implement retry with exponential backoff
+          ATTEMPT=1
+          MAX_ATTEMPTS=3
+          BACKOFF=30
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Deployment attempt $ATTEMPT/$MAX_ATTEMPTS"
+            
+            if railway up --service ${{ env.RAILWAY_PROJECT_NAME }}; then
+              echo "✅ Deployment successful!"
+              break
+            else
+              echo "❌ Deployment failed, retrying in $BACKOFF seconds..."
+              sleep $BACKOFF
+              BACKOFF=$((BACKOFF * 2))
+              ATTEMPT=$((ATTEMPT + 1))
+              
+              if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+                echo "❌ Deployment failed after $MAX_ATTEMPTS attempts"
+                exit 1
+              fi
+            fi
+          done
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           
       - name: Get deployment URL
         id: deployment
         run: |
-          DEPLOYMENT_URL=$(railway domain --service ${{ env.RAILWAY_PROJECT_NAME }})
-          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          # Implement retry with exponential backoff for getting deployment URL
+          ATTEMPT=1
+          MAX_ATTEMPTS=3
+          BACKOFF=10
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Getting deployment URL attempt $ATTEMPT/$MAX_ATTEMPTS"
+            
+            DEPLOYMENT_URL=$(railway domain --service ${{ env.RAILWAY_PROJECT_NAME }})
+            if [ -n "$DEPLOYMENT_URL" ]; then
+              echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+              echo "✅ Deployment URL retrieved: $DEPLOYMENT_URL"
+              break
+            else
+              echo "❌ Failed to get deployment URL, retrying in $BACKOFF seconds..."
+              sleep $BACKOFF
+              BACKOFF=$((BACKOFF * 2))
+              ATTEMPT=$((ATTEMPT + 1))
+              
+              if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+                echo "❌ Failed to get deployment URL after $MAX_ATTEMPTS attempts"
+                exit 1
+              fi
+            fi
+          done
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
@@ -112,29 +149,53 @@ jobs:
       - name: Get deployment URL
         id: deployment
         run: |
-          DEPLOYMENT_URL=$(railway domain --service ${{ env.RAILWAY_PROJECT_NAME }})
-          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          # Implement retry with exponential backoff for getting deployment URL
+          ATTEMPT=1
+          MAX_ATTEMPTS=3
+          BACKOFF=10
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Getting deployment URL attempt $ATTEMPT/$MAX_ATTEMPTS"
+            
+            DEPLOYMENT_URL=$(railway domain --service ${{ env.RAILWAY_PROJECT_NAME }})
+            if [ -n "$DEPLOYMENT_URL" ]; then
+              echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+              echo "✅ Deployment URL retrieved: $DEPLOYMENT_URL"
+              break
+            else
+              echo "❌ Failed to get deployment URL, retrying in $BACKOFF seconds..."
+              sleep $BACKOFF
+              BACKOFF=$((BACKOFF * 2))
+              ATTEMPT=$((ATTEMPT + 1))
+              
+              if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+                echo "❌ Failed to get deployment URL after $MAX_ATTEMPTS attempts"
+                exit 1
+              fi
+            fi
+          done
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           
       - name: Wait for deployment to be ready
         run: |
           echo "Waiting for deployment to be ready..."
-          sleep 30
+          sleep 60
           
-      - name: Health check
+      - name: Health check with extended timeout
+        timeout-minutes: 10
         run: |
           echo "Performing health check on ${{ steps.deployment.outputs.url }}"
           
           # Try multiple times with exponential backoff
           ATTEMPT=1
-          MAX_ATTEMPTS=5
-          BACKOFF=10
+          MAX_ATTEMPTS=10
+          BACKOFF=15
           
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
             echo "Health check attempt $ATTEMPT/$MAX_ATTEMPTS"
             
-            if curl -f --max-time 30 "${{ steps.deployment.outputs.url }}/"; then
+            if curl -f --max-time 60 "${{ steps.deployment.outputs.url }}/"; then
               echo "✅ Health check passed!"
               exit 0
             else

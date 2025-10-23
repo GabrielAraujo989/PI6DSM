@@ -3,7 +3,7 @@ FROM python:3.10-slim AS builder
 # Evita criação de pyc e garante saída não bufferizada
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_DEFAULT_TIMEOUT=300 \
+    PIP_DEFAULT_TIMEOUT=600 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Instala ferramentas necessárias para build de pacotes e dependências nativas
@@ -26,12 +26,12 @@ COPY requirements.txt /app/requirements.txt
 COPY requirements-pytorch.txt /app/requirements-pytorch.txt
 
 # Atualiza pip e instala as dependências no prefix /install (será copiado para final image)
-# Primeiro instala as dependências padrão do PyPI
-RUN python -m pip install --upgrade pip setuptools wheel --timeout 300 && \
-    python -m pip install --prefix=/install --no-cache-dir -r /app/requirements.txt --timeout 300
+# Primeiro instala as dependências padrão do PyPI com flags de otimização
+RUN python -m pip install --upgrade pip setuptools wheel --timeout 600 --no-cache-dir && \
+    python -m pip install --prefix=/install --no-cache-dir --no-deps -r /app/requirements.txt --timeout 600
 
-# Depois instala o PyTorch do repositório específico
-RUN python -m pip install --prefix=/install --no-cache-dir -r /app/requirements-pytorch.txt --timeout 300
+# Depois instala o PyTorch do repositório específico com flags de otimização
+RUN python -m pip install --prefix=/install --no-cache-dir --no-deps -r /app/requirements-pytorch.txt --timeout 600
 
 ########################################
 ## Final image (menor, runtime only)
@@ -74,11 +74,11 @@ RUN if [ -f .env.production ]; then \
         echo "ENV=production" >> /app/.env; \
         echo "HOST=0.0.0.0" >> /app/.env; \
         echo "PORT=8000" >> /app/.env; \
-        echo "WORKERS=2" >> /app/.env; \
+        echo "WORKERS=1" >> /app/.env; \
         echo "WORKER_CLASS=uvicorn.workers.UvicornWorker" >> /app/.env; \
-        echo "TIMEOUT=120" >> /app/.env; \
+        echo "TIMEOUT=600" >> /app/.env; \
         echo "KEEPALIVE=2" >> /app/.env; \
-        echo "MAX_REQUESTS=1000" >> /app/.env; \
+        echo "MAX_REQUESTS=500" >> /app/.env; \
         echo "MAX_REQUESTS_JITTER=100" >> /app/.env; \
         echo "PRELOAD_APP=1" >> /app/.env; \
         echo "LOG_LEVEL=info" >> /app/.env; \
@@ -86,7 +86,7 @@ RUN if [ -f .env.production ]; then \
         echo "MODEL_PATH=/app/best.pt" >> /app/.env; \
         echo "WORKER_CONNECTIONS=1000" >> /app/.env; \
         echo "WORKER_TEMP_DIR=/dev/shm" >> /app/.env; \
-        echo "PIP_TIMEOUT=300" >> /app/.env; \
+        echo "PIP_TIMEOUT=600" >> /app/.env; \
         echo "MODEL_LOADING_TIMEOUT=180" >> /app/.env; \
         echo "CAMERA_CONNECTION_TIMEOUT=10" >> /app/.env; \
         echo "ACCESS_LOG_FORMAT=%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%(a)s\" %(D)s" >> /app/.env; \
@@ -109,7 +109,7 @@ COPY <<EOF /app/start.sh
 # Usa a porta injetada pelo Railway ou fallback para 8000
 PORT=\${PORT:-8000}
 echo "Iniciando aplicação na porta \$PORT"
-exec gunicorn --bind 0.0.0.0:\$PORT --workers \${WORKERS:-2} --timeout \${TIMEOUT:-120} --keepalive \${KEEPALIVE:-2} --max-requests \${MAX_REQUESTS:-1000} --max-requests-jitter \${MAX_REQUESTS_JITTER:-100} --preload server:app
+exec gunicorn --bind 0.0.0.0:\$PORT --workers \${WORKERS:-1} --timeout \${TIMEOUT:-600} --keepalive \${KEEPALIVE:-2} --max-requests \${MAX_REQUESTS:-500} --max-requests-jitter \${MAX_REQUESTS_JITTER:-100} --preload server:app
 EOF
 
 # Torna o script executável

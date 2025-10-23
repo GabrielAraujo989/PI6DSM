@@ -8,7 +8,7 @@ dockerfilePath = "Dockerfile"
 [deploy]
 # Configurações de deployment
 healthcheckPath = "/health"
-healthcheckTimeout = 100
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 
@@ -17,18 +17,18 @@ restartPolicyMaxRetries = 10
 ENV = "production"
 HOST = "0.0.0.0"
 PORT = "8000"
-WORKERS = "2"
+WORKERS = "1"
 WORKER_CLASS = "uvicorn.workers.UvicornWorker"
-TIMEOUT = "120"
+TIMEOUT = "600"
 KEEPALIVE = "2"
-MAX_REQUESTS = "1000"
+MAX_REQUESTS = "500"
 MAX_REQUESTS_JITTER = "100"
 PRELOAD_APP = "1"
 LOG_LEVEL = "info"
 MODEL_PATH = "/app/best.pt"
 WORKER_CONNECTIONS = "1000"
 WORKER_TEMP_DIR = "/dev/shm"
-PIP_TIMEOUT = "300"
+PIP_TIMEOUT = "600"
 MODEL_LOADING_TIMEOUT = "180"
 CAMERA_CONNECTION_TIMEOUT = "10"
 ACCESS_LOG_FORMAT = "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%(a)s\" %(D)s"
@@ -37,3 +37,6 @@ ACCESS_LOG_FORMAT = "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%
 [service]
 name = "detecface"
 sourceDir = "."
+
+# Comando de início explícito para otimizar o uso de recursos
+startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"
