@@ -1,24 +1,31 @@
 {
   "name": "detecface-python-app",
   "version": "1.0.0",
-  "description": "DetecFace Python application - This package.json is only for Railway builder compatibility",
+  "description": "DetecFace Python application - Configured for Railway Railpack with Python",
   "main": "server.py",
   "scripts": {
     "start": "python server.py",
-    "python": "python server.py"
+    "build": "pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -r requirements-pytorch.txt",
+    "install": "pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -r requirements-pytorch.txt",
+    "python": "python server.py",
+    "setup": "chmod +x railpack-setup.sh && ./railpack-setup.sh"
   },
   "keywords": [
     "python",
     "face-detection",
-    "railway"
+    "railway",
+    "railpack"
   ],
   "author": "DetecFace Team",
   "license": "MIT",
   "engines": {
-    "python": ">=3.10"
+    "python": ">=3.10",
+    "node": ">=18.0.0"
   },
   "railway": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "./Dockerfile"
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run install",
+    "startCommand": "python server.py",
+    "pythonVersion": "3.10"
   }
 }
