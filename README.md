@@ -10,9 +10,10 @@ Bem-vindo ao repositório do Projeto Integrador do 6º semestre! Este projeto re
   - [Frontend (Mobile/Web)](frontend/README.md)
   - [Detecção Facial (DetectFace)](DetectFace/README.md)
   - [Treinamento de Modelos](Treinamento/README.md)
-- [Como Executar](#como-executar)
-- [Contribuição](#contribuição)
-- [Licença](#licença)
+  - [Deployment no Railway](#deployment-no-railway)
+  - [Como Executar](#como-executar)
+  - [Contribuição](#contribuição)
+  - [Licença](#licença)
 
 ---
 
@@ -58,6 +59,37 @@ Datasets, scripts, notebooks e documentação para treinar modelos de detecção
 - Notebooks e scripts para YOLO e outros frameworks
 - Documentação detalhada: [Treinamento/README.md](Treinamento/README.md)
   - [Documentação dos Datasets](Treinamento/Documentation/README.md)
+
+---
+
+## 🚀 Deployment no Railway
+
+O DetecFace pode ser implantado facilmente no Railway através de um pipeline de CI/CD automatizado. Para mais detalhes, consulte o [Resumo de Deployment](DEPLOYMENT_SUMMARY.md).
+
+### Pré-requisitos
+- Conta no Railway (https://railway.app)
+- Repositório GitHub conectado ao Railway
+- Railway Token configurado nos secrets do GitHub
+
+### Comandos Principais
+```bash
+# Instalar Railway CLI
+npm install -g @railway/cli
+
+# Login no Railway
+railway login
+
+# Fazer deploy
+railway up
+
+# Verificar status
+railway status
+```
+
+### Links Úteis
+- [Documentação Completa](DEPLOYMENT_SUMMARY.md)
+- [Guia de Deployment Detalhado](DetectFace/RAILWAY_DEPLOYMENT_GUIDE.md)
+- [Verificações Pós-Deployment](DetectFace/post-deploy-checks.md)
 
 ---
 

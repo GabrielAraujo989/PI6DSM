@@ -1,0 +1,39 @@
+# Configurações de deployment para o DetecFace no Railway
+
+[build]
+# Comando para build da aplicação
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Configurações de deployment
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[env]
+# Variáveis de ambiente padrão
+ENV = "production"
+HOST = "0.0.0.0"
+PORT = "8000"
+WORKERS = "2"
+WORKER_CLASS = "uvicorn.workers.UvicornWorker"
+TIMEOUT = "120"
+KEEPALIVE = "2"
+MAX_REQUESTS = "1000"
+MAX_REQUESTS_JITTER = "100"
+PRELOAD_APP = "1"
+LOG_LEVEL = "info"
+MODEL_PATH = "/app/best.pt"
+WORKER_CONNECTIONS = "1000"
+WORKER_TEMP_DIR = "/dev/shm"
+PIP_TIMEOUT = "300"
+MODEL_LOADING_TIMEOUT = "180"
+CAMERA_CONNECTION_TIMEOUT = "10"
+ACCESS_LOG_FORMAT = "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%(a)s\" %(D)s"
+
+# Configurações de serviço
+[service]
+name = "detecface"
+sourceDir = "."

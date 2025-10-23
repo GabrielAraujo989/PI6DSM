@@ -50,3 +50,39 @@ docker-compose up -d
 > - Não suba arquivos de modelo (.pt), vídeos, imagens ou dados sensíveis para o repositório.
 > - O backend deve apontar para o endpoint do container (ex: http://detectface:8000 ou via ngrok para testes externos).
 > - Ao atualizar dependências, sempre reconstrua o container com --no-cache para garantir que as novas versões sejam instaladas.
+
+## Deploy no Railway
+
+Para fazer o deploy do DetecFace no Railway, siga o guia completo:
+
+### Guia de Deployment
+- [RAILWAY_DEPLOYMENT_GUIDE.md](./RAILWAY_DEPLOYMENT_GUIDE.md) - Guia completo passo a passo
+- [setup-railway.sh](./setup-railway.sh) - Script de automação da configuração
+- [post-deploy-checks.md](./post-deploy-checks.md) - Verificações e monitoramento pós-deploy
+
+### Executando o Script de Configuração
+
+**Linux/Mac:**
+```bash
+chmod +x setup-railway.sh
+./setup-railway.sh
+```
+
+**Windows:**
+```cmd
+bash setup-railway.sh
+```
+ou
+```cmd
+# Se você tem Git Bash instalado
+./setup-railway.sh
+```
+
+### Variáveis de Ambiente Necessárias
+- `PORT=8000`
+- `ENVIRONMENT=production`
+- `PYTHONUNBUFFERED=1`
+- `SECRET_KEY` (opcional, mas recomendado)
+
+### Testes Pós-Deploy
+Após o deploy, execute as verificações em [post-deploy-checks.md](./post-deploy-checks.md) para garantir que tudo está funcionando corretamente.

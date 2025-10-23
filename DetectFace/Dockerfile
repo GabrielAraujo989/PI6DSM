@@ -97,10 +97,23 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Health check para verificar se a API está respondendo
+# Usa a variável de ambiente PORT injetada pelo Railway
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-EXPOSE 8000
+EXPOSE ${PORT:-8000}
 
-# CMD para execução com gunicorn em modo de produção
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120", "--keepalive", "2", "--max-requests", "1000", "--max-requests-jitter", "100", "--preload", "server:app"]
+# Script de inicialização que lê a variável de ambiente PORT do Railway
+COPY <<EOF /app/start.sh
+#!/bin/bash
+# Usa a porta injetada pelo Railway ou fallback para 8000
+PORT=\${PORT:-8000}
+echo "Iniciando aplicação na porta \$PORT"
+exec gunicorn --bind 0.0.0.0:\$PORT --workers \${WORKERS:-2} --timeout \${TIMEOUT:-120} --keepalive \${KEEPALIVE:-2} --max-requests \${MAX_REQUESTS:-1000} --max-requests-jitter \${MAX_REQUESTS_JITTER:-100} --preload server:app
+EOF
+
+# Torna o script executável
+RUN chmod +x /app/start.sh
+
+# CMD para execução com o script que lê a variável de ambiente PORT
+CMD ["/app/start.sh"]

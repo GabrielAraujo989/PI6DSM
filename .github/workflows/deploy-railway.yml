@@ -1,0 +1,186 @@
+name: Deploy DetecFace to Railway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'DetectFace/**'
+  workflow_dispatch:
+
+env:
+  RAILWAY_PROJECT_NAME: detecface
+
+jobs:
+  test:
+    name: Test DetecFace Service
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
+      - name: Install dependencies
+        working-directory: ./DetectFace
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run basic tests
+        working-directory: ./DetectFace
+        run: |
+          python -c "import cv2; print('OpenCV version:', cv2.__version__)"
+          python -c "import torch; print('PyTorch version:', torch.__version__)"
+          python -c "import ultralytics; print('Ultralytics version:', ultralytics.__version__)"
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          
+      - name: Build Docker image
+        working-directory: ./DetectFace
+        run: |
+          docker build -t detecface-test .
+          
+      - name: Test Docker container
+        working-directory: ./DetectFace
+        run: |
+          docker run -d --name detecface-test-container -p 5000:5000 \
+            -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+            detecface-test
+            
+          echo "Waiting for container to start..."
+          sleep 10
+          
+          echo "Checking if container is running..."
+          docker ps | grep detecface-test-container
+          
+          echo "Testing container health..."
+          curl -f http://localhost:5000/ || exit 1
+          
+          echo "Stopping test container..."
+          docker stop detecface-test-container
+          docker rm detecface-test-container
+
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+        
+      - name: Login to Railway
+        run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
+        
+      - name: Deploy to Railway
+        working-directory: ./DetectFace
+        run: |
+          railway up --service ${{ env.RAILWAY_PROJECT_NAME }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          
+      - name: Get deployment URL
+        id: deployment
+        run: |
+          DEPLOYMENT_URL=$(railway domain --service ${{ env.RAILWAY_PROJECT_NAME }})
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+        
+      - name: Get deployment URL
+        id: deployment
+        run: |
+          DEPLOYMENT_URL=$(railway domain --service ${{ env.RAILWAY_PROJECT_NAME }})
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          
+      - name: Wait for deployment to be ready
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 30
+          
+      - name: Health check
+        run: |
+          echo "Performing health check on ${{ steps.deployment.outputs.url }}"
+          
+          # Try multiple times with exponential backoff
+          ATTEMPT=1
+          MAX_ATTEMPTS=5
+          BACKOFF=10
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Health check attempt $ATTEMPT/$MAX_ATTEMPTS"
+            
+            if curl -f --max-time 30 "${{ steps.deployment.outputs.url }}/"; then
+              echo "✅ Health check passed!"
+              exit 0
+            else
+              echo "❌ Health check failed, retrying in $BACKOFF seconds..."
+              sleep $BACKOFF
+              BACKOFF=$((BACKOFF * 2))
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+          echo "❌ Health check failed after $MAX_ATTEMPTS attempts"
+          exit 1
+          
+      - name: Verify API endpoints
+        run: |
+          echo "Testing API endpoints..."
+          
+          # Test main endpoint
+          curl -f "${{ steps.deployment.outputs.url }}/" || exit 1
+          
+          # Test health endpoint if exists
+          curl -f "${{ steps.deployment.outputs.url }}/health" || echo "Health endpoint not available"
+          
+          echo "✅ API endpoints verification completed!"
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [test, deploy, verify]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Get deployment status
+        if: needs.deploy.result == 'success' && needs.verify.result == 'success'
+        run: |
+          echo "🚀 Deployment successful!"
+          echo "Service is available at: $(railway domain --service ${{ env.RAILWAY_PROJECT_NAME }})"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          
+      - name: Notify failure
+        if: needs.deploy.result == 'failure' || needs.verify.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Please check the logs for more information."
+          exit 1
