@@ -9,6 +9,7 @@ dockerfilePath = "./Dockerfile"
 
 [deploy]
 # Configurações de deployment
+startCommand = "/app/start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
@@ -40,6 +41,3 @@ ACCESS_LOG_FORMAT = "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%
 name = "detecface"
 # Root Directory configurado para ativar Docker builder
 sourceDir = "./DetectFace"
-
-# Comando de início otimizado para Docker builder
-startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keep-alive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"

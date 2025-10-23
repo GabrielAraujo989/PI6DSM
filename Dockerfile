@@ -68,15 +68,19 @@ COPY DetectFace/server.py /app/
 # Copia o modelo pré-treinado se existir
 COPY DetectFace/best.pt /app/best.pt
 
+# Copia o script de inicialização que lida com a variável PORT
+COPY DetectFace/start.sh /app/start.sh
+
 # Try to copy .env.production if it exists, otherwise create a default .env
 # This handles both local builds and EasyPanel/Digital Ocean deployments
+# NOTE: Não definimos PORT aqui para permitir que o Railway injete a variável corretamente
 RUN if [ -f DetectFace/.env.production ]; then \
         cp DetectFace/.env.production /app/.env; \
     else \
         echo "# Default production environment" > /app/.env; \
         echo "ENV=production" >> /app/.env; \
         echo "HOST=0.0.0.0" >> /app/.env; \
-        echo "PORT=8000" >> /app/.env; \
+        echo "# PORT será injetada pelo Railway - não definir aqui" >> /app/.env; \
         echo "WORKERS=1" >> /app/.env; \
         echo "WORKER_CLASS=uvicorn.workers.UvicornWorker" >> /app/.env; \
         echo "TIMEOUT=600" >> /app/.env; \
@@ -96,15 +100,34 @@ RUN if [ -f DetectFace/.env.production ]; then \
     fi
 
 # Ajusta permissões e muda para usuário não-root
-RUN chown -R appuser:appuser /app
+RUN chown -R appuser:appuser /app && chmod +x /app/start.sh
 USER appuser
 
 # Health check para verificar se a API está respondendo
-# Usa a variável de ambiente PORT injetada pelo Railway
+# Usa a porta padrão 8000 para health check, Railway irá redirecionar corretamente
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
-EXPOSE ${PORT:-8000}
+EXPOSE 8000
 
+# CMD para execução usando o script de inicialização que lida com a variável PORT
+CMD ["/app/start.sh"]
+EXPOSE 8000
+
+# CMD para execução usando o script de inicialização que lida com a variável PORT
+CMD ["/app/start.sh"]
+
+# CMD para execução usando o script de inicialização que lida com a variável PORT
+CMD ["/app/start.sh"]
 # CMD para execução direta usando shell para ler variáveis de ambiente
 CMD ["sh", "-c", "PORT=${PORT:-8000} && echo \"Iniciando aplicação na porta $PORT\" && exec gunicorn --bind 0.0.0.0:$PORT --workers ${WORKERS:-1} --timeout ${TIMEOUT:-600} --keep-alive ${KEEPALIVE:-2} --max-requests ${MAX_REQUESTS:-500} --max-requests-jitter ${MAX_REQUESTS_JITTER:-100} --preload server:app"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+# CMD para execução usando o script de inicialização que lida com a variável PORT
+CMD ["/app/start.sh"]
+# CMD para execução direta usando shell para ler variáveis de ambiente
+CMD ["sh", "-c", "PORT=${PORT:-8000} && echo \"Iniciando aplicação na porta $PORT\" && exec gunicorn --bind 0.0.0.0:$PORT --workers ${WORKERS:-1} --timeout ${TIMEOUT:-600} --keep-alive ${KEEPALIVE:-2} --max-requests ${MAX_REQUESTS:-500} --max-requests-jitter ${MAX_REQUESTS_JITTER:-100} --preload server:app"]
+

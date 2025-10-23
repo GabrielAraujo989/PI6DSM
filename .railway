@@ -16,6 +16,7 @@ name = "detecface"
 
 [deploy]
 # Configurações de deployment otimizadas
+startCommand = "/app/start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
@@ -45,5 +46,5 @@ CAMERA_CONNECTION_TIMEOUT = "10"
 # 1. Este arquivo .railway força o uso do Docker builder
 # 2. O railway.json na raiz reforça essa configuração
 # 3. O Dockerfile principal está em ./DetectFace/Dockerfile
-# 4. Existe um Dockerfile alternativo na raiz como fallback
+# 4. Usamos start.sh para lidar com a variável PORT de forma segura
 # 5. Esta configuração resolve o problema de detecção do Railpack (Node.js vs Python)
