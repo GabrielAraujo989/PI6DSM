@@ -3,9 +3,11 @@ opencv-python-headless~=4.11.0.86
 ultralytics~=8.3.117
 
 # PyTorch CPU-only version para evitar problemas de compatibilidade e instalação
-torch==2.7.0+cpu --index-url https://download.pytorch.org/whl/cpu
-torchvision==0.22.0+cpu --index-url https://download.pytorch.org/whl/cpu
+# Using stable version that's available for CPU
+torch==2.1.2+cpu
+torchvision==0.16.2+cpu
 
+# Additional dependencies
 fastapi
 uvicorn[standard]
 gunicorn
@@ -14,3 +16,6 @@ pydantic
 python-jose
 pyjwt
 python-multipart
+
+# Index URL for PyTorch CPU versions
+--index-url https://download.pytorch.org/whl/cpu
