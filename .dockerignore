@@ -1,0 +1,73 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Environment and IDE
+.env
+.env.development
+.env.local
+.venv
+venv/
+ENV/
+env/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.pid
+
+# Media files (test data)
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+
+# Documentation and test files
+*.md
+docs/
+tests/
+test_*.py
+*_test.py
+
+# Git
+.git/
+.gitignore
+
+# Docker files (don't nest docker contexts)
+docker-compose*.yml
+
+# Development artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Node modules (from other parts of the project)
+node_modules/
+
+# Exclude other services to keep context small
+frontend/
+service/
+Model/
+Treinamento/
+Pi6dsm/

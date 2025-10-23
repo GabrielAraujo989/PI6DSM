@@ -1,7 +1,7 @@
 {
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "./DetectFace/Dockerfile",
+    "dockerfilePath": "./Dockerfile",
     "buildArgs": {
       "PYTHON_VERSION": "3.10"
     }
@@ -15,7 +15,7 @@
   },
   "service": {
     "name": "detecface",
-    "sourceDir": "./DetectFace"
+    "sourceDir": "."
   },
   "env": {
     "ENV": "production",
