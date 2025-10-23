@@ -48,7 +48,9 @@ scp best.pt root@your-droplet-ip:/opt/detectface/
 
 ### 3. Configure Environment Variables
 
-Create a production environment file:
+The application now supports two methods for environment configuration:
+
+#### Option A: Using .env.production file (Recommended for local testing)
 
 ```bash
 # Create production environment file
@@ -58,10 +60,16 @@ cp .env.production .env
 nano .env
 ```
 
-Important settings to update:
+#### Option B: Using Environment Variables (Required for EasyPanel/Digital Ocean)
+
+The Dockerfile now includes default environment configuration, but you should override these with your own values:
+
+Important settings to configure:
 - `SECRET_KEY`: Generate a secure random key
 - `MODEL_PATH`: Ensure it points to `/app/best.pt`
 - Timeouts and worker settings should remain as configured
+
+For EasyPanel deployment, set these as environment variables in the EasyPanel interface rather than relying on the .env file.
 
 ### 4. Build and Deploy with Docker Compose
 
@@ -75,6 +83,28 @@ docker-compose up -d
 # Check the logs to ensure it started correctly
 docker-compose logs -f detectface
 ```
+
+#### EasyPanel/Digital Ocean App Platform Deployment
+
+When deploying to EasyPanel or Digital Ocean App Platform:
+
+1. **Don't rely on .env files** - The platform may not include these in the build context
+2. **Set environment variables in the platform interface** with these key values:
+   - `ENV=production`
+   - `HOST=0.0.0.0`
+   - `PORT=8000`
+   - `WORKERS=2`
+   - `TIMEOUT=120`
+   - `LOG_LEVEL=info`
+   - `SECRET_KEY=your-secure-secret-key-here`
+   - `MODEL_PATH=/app/best.pt`
+   - `WORKER_CONNECTIONS=1000`
+   - `WORKER_TEMP_DIR=/dev/shm`
+   - `PIP_TIMEOUT=300`
+   - `MODEL_LOADING_TIMEOUT=180`
+   - `CAMERA_CONNECTION_TIMEOUT=10`
+
+3. **Ensure the model file is included** in your deployment or mounted as a volume
 
 ### 5. Verify Health Check
 
@@ -194,6 +224,17 @@ tar -czf /opt/detectface/backups/logs-$(date +%Y%m%d).tar.gz /opt/detectface/log
    - The optimized Dockerfile with multi-stage build reduces deployment time
    - Pip timeout is set to 300 seconds
    - Model loading has retry mechanism with 180-second timeout
+
+5. **".env.production not found" error on EasyPanel/Digital Ocean**
+   - This is now handled automatically by the updated Dockerfile
+   - The build will create a default .env file if .env.production is not found
+   - Ensure all required environment variables are set in the platform interface
+   - The application will use environment variables passed at runtime, overriding the defaults
+
+6. **Environment variables not being applied**
+   - Verify the environment variables are correctly set in your deployment platform
+   - Check container logs to see which environment values are being used
+   - Remember that runtime environment variables override the defaults in the Dockerfile
 
 ### Performance Optimization
 

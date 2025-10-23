@@ -60,7 +60,33 @@ COPY --from=builder /install /usr/local
 
 # Copia apenas o código necessário (excluindo modelos grandes que serão montados como volume)
 COPY server.py /app/
-COPY .env.production /app/.env
+
+# Try to copy .env.production if it exists, otherwise create a default .env
+# This handles both local builds and EasyPanel/Digital Ocean deployments
+RUN if [ -f .env.production ]; then \
+        cp .env.production /app/.env; \
+    else \
+        echo "# Default production environment" > /app/.env; \
+        echo "ENV=production" >> /app/.env; \
+        echo "HOST=0.0.0.0" >> /app/.env; \
+        echo "PORT=8000" >> /app/.env; \
+        echo "WORKERS=2" >> /app/.env; \
+        echo "WORKER_CLASS=uvicorn.workers.UvicornWorker" >> /app/.env; \
+        echo "TIMEOUT=120" >> /app/.env; \
+        echo "KEEPALIVE=2" >> /app/.env; \
+        echo "MAX_REQUESTS=1000" >> /app/.env; \
+        echo "MAX_REQUESTS_JITTER=100" >> /app/.env; \
+        echo "PRELOAD_APP=1" >> /app/.env; \
+        echo "LOG_LEVEL=info" >> /app/.env; \
+        echo "SECRET_KEY=change-this-secret-key-in-production" >> /app/.env; \
+        echo "MODEL_PATH=/app/best.pt" >> /app/.env; \
+        echo "WORKER_CONNECTIONS=1000" >> /app/.env; \
+        echo "WORKER_TEMP_DIR=/dev/shm" >> /app/.env; \
+        echo "PIP_TIMEOUT=300" >> /app/.env; \
+        echo "MODEL_LOADING_TIMEOUT=180" >> /app/.env; \
+        echo "CAMERA_CONNECTION_TIMEOUT=10" >> /app/.env; \
+        echo "ACCESS_LOG_FORMAT=%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%(a)s\" %(D)s" >> /app/.env; \
+    fi
 
 # Ajusta permissões e muda para usuário não-root
 RUN chown -R appuser:appuser /app

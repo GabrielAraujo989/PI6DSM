@@ -1,10 +1,10 @@
 # Docker Optimization Guide for DetectFace API
 
-This document explains the changes made to the Docker setup to address the 3-minute timeout issue and ensure reliable deployment on Digital Ocean.
+This document explains the changes made to the Docker setup to address the 3-minute timeout issue and ensure reliable deployment on Digital Ocean and EasyPanel.
 
 ## Overview of Changes
 
-The original Docker setup was experiencing 3-minute timeout issues during deployment on Digital Ocean. The following optimizations have been implemented to resolve this issue and create a production-ready, self-sufficient Docker configuration.
+The original Docker setup was experiencing 3-minute timeout issues during deployment on Digital Ocean and environment file errors on EasyPanel. The following optimizations have been implemented to resolve these issues and create a production-ready, self-sufficient Docker configuration.
 
 ## 1. Multi-Stage Dockerfile Optimization
 
@@ -202,24 +202,43 @@ USER appuser
 Hard-coded configuration values made the application inflexible for different environments.
 
 ### Solution Implemented
-Environment-specific configuration with defaults:
+Environment-specific configuration with defaults for the two variables actually used in the code:
 
 ```python
+# Used in server.py
 MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), 'best.pt'))
+SECRET_KEY = os.getenv("SECRET_KEY", "SUA_SECRET_KEY_PADRAO_SE_NAO_DEFINIDA")
 ```
 
-```env
-# In .env.production
-MODEL_PATH=/app/best.pt
-WORKERS=2
-TIMEOUT=120
-```
+### Actually Used Environment Variables
+
+The application only uses two environment variables in the code:
+
+1. **SECRET_KEY** (Required):
+   - Used for JWT authentication
+   - Has a default value but should be set to a secure value in production
+   - No functional default is safe for production
+
+2. **MODEL_PATH** (Optional):
+   - Path to the YOLO model file
+   - Defaults to `best.pt` in the same directory as server.py
+   - In Docker, typically set to `/app/best.pt` to match the volume mount
+
+### Other Environment Variables
+
+All other environment variables listed in `.env.production` and `docker-compose.yml` are used by Gunicorn or are for documentation purposes only. They have sensible defaults in the Dockerfile:
+
+- HOST, PORT, WORKERS, TIMEOUT, etc.: Gunicorn configuration with production defaults
+- LOG_LEVEL, WORKER_CONNECTIONS, etc.: Performance tuning with reasonable defaults
+- PIP_TIMEOUT, MODEL_LOADING_TIMEOUT: Build and startup timeouts
 
 ### Benefits
-- **Flexibility**: Easy to configure for different environments
-- **Digital Ocean Ready**: Pre-configured for optimal DO performance
-- **Maintainability**: Clear separation of configuration and code
-- **Scalability**: Easy to adjust for different instance sizes
+- **Simplicity**: Only two variables to configure for the application itself
+- **Security**: Clear focus on the one critical security variable (SECRET_KEY)
+- **Flexibility**: Easy to configure model location if needed
+- **Production Ready**: All other settings have sensible defaults optimized for production
+
+For a minimal configuration example, see the [`.env.example`](.env.example) file in the repository, which shows only the essential variables needed to run the application.
 
 ## 9. Resource Limits and Reservations
 
@@ -265,14 +284,46 @@ Comprehensive .dockerignore file excluding:
 - **Security**: Excludes sensitive development files
 - **Efficiency**: Reduces network transfer during deployment
 
-## How These Changes Address the 3-Minute Timeout Issue
+## 11. Robust Environment File Handling
 
+### Problem Addressed
+EasyPanel and some cloud platforms don't include `.env.production` in the build context, causing build failures with "not found" errors.
+
+### Solution Implemented
+Conditional environment file handling in Dockerfile:
+
+```dockerfile
+# Try to copy .env.production if it exists, otherwise create a default .env
+RUN if [ -f .env.production ]; then \
+        cp .env.production /app/.env; \
+    else \
+        echo "# Default production environment" > /app/.env; \
+        echo "ENV=production" >> /app/.env; \
+        # ... additional default settings
+    fi
+```
+
+### Benefits
+- **Platform Agnostic**: Works on both local builds and cloud platforms
+- **Graceful Fallback**: Creates sensible defaults when files are missing
+- **Runtime Override**: Environment variables can override defaults at runtime
+- **EasyPanel Compatible**: Resolves build issues on EasyPanel and similar platforms
+
+## How These Changes Address Deployment Issues
+
+### 3-Minute Timeout Issue (Digital Ocean)
 1. **Reduced Build Time**: Multi-stage build and optimized dependencies reduce build time from >3 minutes to <1 minute
 2. **Smaller Transfer Size**: Excluding model file reduces image size by hundreds of MB
 3. **Faster Dependency Installation**: CPU-only packages and extended timeouts prevent installation failures
 4. **Efficient Caching**: Better layer caching speeds up subsequent builds
 5. **Optimized Startup**: Model loading with retry and health checks ensure reliable startup
 6. **Resource Management**: Proper limits prevent resource exhaustion during deployment
+
+### Environment File Issues (EasyPanel)
+1. **Conditional File Handling**: Dockerfile now works with or without .env.production
+2. **Default Configuration**: Sensible defaults ensure the container starts even without config files
+3. **Runtime Configuration**: Environment variables can be set in the platform interface
+4. **Platform Compatibility**: Works across different deployment platforms
 
 ## Best Practices Followed
 
@@ -295,4 +346,4 @@ The included `test_docker_setup.sh` script validates:
 - API endpoints are functional
 - Resource usage is within limits
 
-This comprehensive approach ensures that the DetectFace API will deploy reliably to Digital Ocean without experiencing the 3-minute timeout issues that were present in the original configuration.
+This comprehensive approach ensures that the DetectFace API will deploy reliably to Digital Ocean, EasyPanel, and other cloud platforms without experiencing timeout issues or environment file errors that were present in the original configuration.
