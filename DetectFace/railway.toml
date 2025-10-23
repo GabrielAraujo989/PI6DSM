@@ -1,11 +1,11 @@
 # Configurações de deployment para o DetecFace no Railway
-# Atualizado para usar Railpack (Dockerfile não está mais disponível)
+# Atualizado para usar Docker builder com Root Directory
 
 [build]
-# Usa Railpack para Python (Dockerfile builder não está mais disponível)
-builder = "NIXPACKS"
-# Comando para instalar dependências Python
-buildCommand = "pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -r requirements-pytorch.txt"
+# Usa Docker builder com Root Directory para forçar uso do Dockerfile
+builder = "dockerfile"
+# Caminho do Dockerfile relativo ao Root Directory
+dockerfilePath = "./Dockerfile"
 
 [deploy]
 # Configurações de deployment
@@ -38,7 +38,8 @@ ACCESS_LOG_FORMAT = "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%
 # Configurações de serviço
 [service]
 name = "detecface"
-# Removido sourceDir para evitar erro "Dockerfile does not exist" com Root Directory
+# Root Directory configurado para ativar Docker builder
+sourceDir = "./DetectFace"
 
-# Comando de início explícito para otimizar o uso de recursos com Railpack
+# Comando de início otimizado para Docker builder
 startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"

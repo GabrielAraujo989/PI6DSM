@@ -1,20 +1,23 @@
 {
   "name": "detecface-python-app",
   "version": "1.0.0",
-  "description": "DetecFace Python application - Configured for Railway Railpack with Python",
+  "description": "DetecFace Python application - Configured for Railway Docker builder with Root Directory",
   "main": "server.py",
   "scripts": {
     "start": "python server.py",
     "build": "pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -r requirements-pytorch.txt",
     "install": "pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -r requirements-pytorch.txt",
     "python": "python server.py",
+    "docker-build": "docker build -t detecface .",
+    "docker-run": "docker run -p 8000:8000 detecface",
     "setup": "chmod +x railpack-setup.sh && ./railpack-setup.sh"
   },
   "keywords": [
     "python",
     "face-detection",
     "railway",
-    "railpack"
+    "docker",
+    "root-directory"
   ],
   "author": "DetecFace Team",
   "license": "MIT",
@@ -23,9 +26,11 @@
     "node": ">=18.0.0"
   },
   "railway": {
-    "builder": "NIXPACKS",
-    "buildCommand": "npm run install",
-    "startCommand": "python server.py",
-    "pythonVersion": "3.10"
+    "builder": "dockerfile",
+    "dockerfilePath": "./Dockerfile",
+    "buildCommand": "npm run build",
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
+    "pythonVersion": "3.10",
+    "sourceDir": "./DetectFace"
   }
 }

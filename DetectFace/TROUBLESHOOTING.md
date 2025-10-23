@@ -79,18 +79,130 @@ docker stats <container_id>
 
 ## Railway Builder Issues (Railpack vs Dockerfile)
 
-### IMPORTANT UPDATE: Railway No Longer Supports Dockerfile Builder
+### SOLUÇÃO DEFINITIVA: Usando Root Directory com Docker Builder
 
-**As of October 2025, Railway has removed the "Dockerfile" builder option and now only supports Railpack and Nixpacks.**
+**Problema Resolvido:**
+- Railpack estava detectando Node.js em vez de Python
+- Quando configuramos Root Directory, o Builder muda para Docker (que é o que queremos)
 
-**New Limitations:**
-- Dockerfile builder is no longer available
-- Setting a Root Directory causes "Dockerfile `./Dockerfile` does not exist" error
-- Must use Railpack (or Nixpacks) for all deployments
+**Solução Implementada:**
+Usar Root Directory para forçar o Railway a usar Docker builder em vez do Railpack, resolvendo o problema de detecção de linguagem.
 
-### Problem: Railway Migration from Dockerfile to Railpack
+### Problema: Detecção Incorreta de Linguagem pelo Railpack
 
-**Symptoms:**
+**Sintomas:**
+- Railpack detecta Node.js em vez de Python
+- Build falha com erros de dependências incorretas
+- Railway não reconhece o projeto Python corretamente
+
+**Causa Raiz:**
+O Railpack pode ter dificuldade em detectar corretamente projetos Python em estruturas de diretórios complexas ou quando há arquivos de outras linguagens no projeto.
+
+### Solução: Root Directory com Docker Builder
+
+**Estratégia:**
+1. Configurar Root Directory para ativar Docker builder
+2. Manter o Dockerfile para controle total do build
+3. Usar arquivos de configuração para forçar o uso do Docker
+
+#### 1. Configuração do railway.toml
+
+```toml
+[build]
+# Usa Docker builder com Root Directory para forçar uso do Dockerfile
+builder = "dockerfile"
+# Caminho do Dockerfile relativo ao Root Directory
+dockerfilePath = "./Dockerfile"
+
+[service]
+name = "detecface"
+# Root Directory configurado para ativar Docker builder
+sourceDir = "./DetectFace"
+
+# Comando de início otimizado para Docker builder
+startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"
+```
+
+#### 2. Configuração do package.json
+
+```json
+{
+  "name": "detecface-python-app",
+  "version": "1.0.0",
+  "description": "DetecFace Python application - Configured for Railway Docker builder with Root Directory",
+  "scripts": {
+    "start": "python server.py",
+    "build": "pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -r requirements-pytorch.txt",
+    "docker-build": "docker build -t detecface .",
+    "docker-run": "docker run -p 8000:8000 detecface"
+  },
+  "railway": {
+    "builder": "dockerfile",
+    "dockerfilePath": "./Dockerfile",
+    "buildCommand": "npm run build",
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
+    "pythonVersion": "3.10",
+    "sourceDir": "./DetectFace"
+  }
+}
+```
+
+#### 3. Arquivo .railway na Raiz do Projeto
+
+Crie um arquivo `.railway` na raiz do projeto:
+
+```toml
+[build]
+# Força o uso do Docker builder
+builder = "dockerfile"
+
+[service]
+# Define o Root Directory para o projeto DetectFace
+# Isso ativa o Docker builder em vez do Railpack
+sourceDir = "./DetectFace"
+```
+
+#### 4. Passos para Configuração no Railway UI
+
+1. **Acesse as configurações do projeto no Railway**
+2. **Configure o Root Directory:**
+   - Vá para Settings → Build & Deploy
+   - Defina Root Directory como: `DetectFace`
+3. **Verifique o Builder:**
+   - O Railway deve detectar automaticamente o uso do Dockerfile
+   - O Builder deve mostrar "Dockerfile" em vez de "Railpack"
+4. **Variáveis de Ambiente:**
+   - Configure todas as variáveis necessárias
+   - Especialmente `PORT`, `ENV`, `MODEL_PATH`
+
+#### 5. Vantagens Desta Abordagem
+
+- **Controle Total:** Dockerfile oferece controle completo sobre o ambiente
+- **Determinístico:** Build sempre reproduzível
+- **Performance:** Otimizado para o runtime específico
+- **Independência:** Não depende da detecção automática do Railway
+- **Flexibilidade:** Permite customizações avançadas
+
+#### 6. Verificação do Deploy
+
+Após o deploy, verifique se está usando Docker:
+
+```bash
+# Verifica logs do build
+railway logs --service detecface | grep -i docker
+
+# Verifica se Python está sendo usado
+railway logs --service detecface | grep -i python
+
+# Verifica se as dependências foram instaladas
+railway logs --service detecface | grep -i pip
+```
+
+### Problema: Railway Migration from Dockerfile to Railpack (Anterior)
+
+**Nota:** Esta seção foi mantida para referência histórica, mas a solução acima (Root Directory com Docker) é a abordagem recomendada atualmente.
+
+**Sintomas:**
 - Build fails with "Dockerfile `./Dockerfile` does not exist" when Root Directory is set
 - Railway no longer recognizes Dockerfile builder option
 - Deployment configurations that previously worked now fail
