@@ -35,14 +35,12 @@ if [ -f /app/.env ]; then
     sed -i '/^PORT=/d' /app/.env
 fi
 
-# Inicia a aplicação com gunicorn
-echo "Iniciando gunicorn na porta $PORT..."
-exec gunicorn \
-    --bind 0.0.0.0:$PORT \
+# Inicia a aplicação com uvicorn (recomendado para FastAPI)
+echo "Iniciando uvicorn na porta $PORT..."
+exec uvicorn \
+    --host 0.0.0.0 \
+    --port $PORT \
     --workers ${WORKERS:-1} \
-    --timeout ${TIMEOUT:-600} \
-    --keep-alive ${KEEPALIVE:-2} \
-    --max-requests ${MAX_REQUESTS:-500} \
-    --max-requests-jitter ${MAX_REQUESTS_JITTER:-100} \
-    --preload \
+    --timeout-keep-alive ${KEEPALIVE:-2} \
+    --log-level ${LOG_LEVEL:-info} \
     server:app

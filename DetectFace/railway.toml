@@ -19,9 +19,9 @@ restartPolicyMaxRetries = 10
 # Variáveis de ambiente padrão
 ENV = "production"
 HOST = "0.0.0.0"
-PORT = "8000"
+# PORT será injetada automaticamente pelo Railway - não definir aqui
 WORKERS = "1"
-WORKER_CLASS = "uvicorn.workers.UvicornWorker"
+# WORKER_CLASS não é necessário com uvicorn
 TIMEOUT = "600"
 KEEPALIVE = "2"
 MAX_REQUESTS = "500"

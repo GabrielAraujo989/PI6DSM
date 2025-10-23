@@ -42,10 +42,9 @@ Thumbs.db
 *.tiff
 
 # Model files (will be mounted as volume)
-*.pt
+# Note: best.pt is needed for the container to work, so it's not ignored
 *.onnx
 *.pth
-best.pt
 yolo11s.pt
 
 # Documentation and test files
