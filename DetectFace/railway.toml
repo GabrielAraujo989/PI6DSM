@@ -1,9 +1,12 @@
 # Configurações de deployment para o DetecFace no Railway
 
 [build]
-# Comando para build da aplicação
+# Força o uso do Dockerfile em vez do Railpack
 builder = "DOCKERFILE"
 dockerfilePath = "./Dockerfile"
+# Desabilita detecção automática para evitar que o Railway use Railpack
+watchPatterns = []
+buildCommand = ""
 
 [deploy]
 # Configurações de deployment

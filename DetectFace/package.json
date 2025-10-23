@@ -1,0 +1,24 @@
+{
+  "name": "detecface-python-app",
+  "version": "1.0.0",
+  "description": "DetecFace Python application - This package.json is only for Railway builder compatibility",
+  "main": "server.py",
+  "scripts": {
+    "start": "python server.py",
+    "python": "python server.py"
+  },
+  "keywords": [
+    "python",
+    "face-detection",
+    "railway"
+  ],
+  "author": "DetecFace Team",
+  "license": "MIT",
+  "engines": {
+    "python": ">=3.10"
+  },
+  "railway": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "./Dockerfile"
+  }
+}
