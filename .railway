@@ -1,14 +1,18 @@
 # Railway Configuration File
-# Este arquivo força o Railway a usar Docker builder com Root Directory
+# Este arquivo força o Railway a usar Docker builder em vez do Railpack
+# Atualizado para trabalhar com railway.json
 
 [build]
-# Força o uso do Docker builder
+# Força o uso do Docker builder (em vez do Railpack)
 builder = "dockerfile"
+# Caminho explícito para o Dockerfile
+dockerfilePath = "./DetectFace/Dockerfile"
 
 [service]
 # Define o Root Directory para o projeto DetectFace
 # Isso ativa o Docker builder em vez do Railpack
 sourceDir = "./DetectFace"
+name = "detecface"
 
 [deploy]
 # Configurações de deployment otimizadas
@@ -17,8 +21,29 @@ healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 
+# Variáveis de ambiente para forçar Python
+[env]
+ENV = "production"
+HOST = "0.0.0.0"
+PORT = "8000"
+WORKERS = "1"
+WORKER_CLASS = "uvicorn.workers.UvicornWorker"
+TIMEOUT = "600"
+KEEPALIVE = "2"
+MAX_REQUESTS = "500"
+MAX_REQUESTS_JITTER = "100"
+PRELOAD_APP = "1"
+LOG_LEVEL = "info"
+MODEL_PATH = "/app/best.pt"
+WORKER_CONNECTIONS = "1000"
+WORKER_TEMP_DIR = "/dev/shm"
+PIP_TIMEOUT = "600"
+MODEL_LOADING_TIMEOUT = "180"
+CAMERA_CONNECTION_TIMEOUT = "10"
+
 # Instruções para o Railway:
-# 1. Use Root Directory = "./DetectFace"
-# 2. Isso ativa automaticamente o Docker builder
-# 3. O Dockerfile está localizado em ./DetectFace/Dockerfile
-# 4. Esta configuração resolve o problema de detecção do Railpack
+# 1. Este arquivo .railway força o uso do Docker builder
+# 2. O railway.json na raiz reforça essa configuração
+# 3. O Dockerfile principal está em ./DetectFace/Dockerfile
+# 4. Existe um Dockerfile alternativo na raiz como fallback
+# 5. Esta configuração resolve o problema de detecção do Railpack (Node.js vs Python)

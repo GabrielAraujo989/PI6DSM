@@ -198,6 +198,146 @@ railway logs --service detecface | grep -i python
 railway logs --service detecface | grep -i pip
 ```
 
+## Forçando Docker Builder com railway.json
+
+### Problema: Railpack Continua Detectando Node.js em Vez de Python
+
+**Sintomas:**
+- Railway ainda mostra "builder": "RAILPACK" no painel
+- Railpack detecta incorretamente Node.js em vez de Python
+- Build falha com dependências incorretas
+- Configurações anteriores não estão funcionando
+
+### SOLUÇÃO DEFINITIVA: railway.json na Raiz do Projeto
+
+Quando as configurações anteriores não funcionam, use um arquivo `railway.json` na raiz do projeto para forçar explicitamente o uso do Docker builder.
+
+#### 1. Crie railway.json na Raiz do Projeto
+
+```json
+{
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "./DetectFace/Dockerfile",
+    "buildArgs": {
+      "PYTHON_VERSION": "3.10"
+    }
+  },
+  "deploy": {
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "service": {
+    "name": "detecface",
+    "sourceDir": "./DetectFace"
+  },
+  "env": {
+    "ENV": "production",
+    "HOST": "0.0.0.0",
+    "PORT": "8000",
+    "WORKERS": "1",
+    "WORKER_CLASS": "uvicorn.workers.UvicornWorker",
+    "TIMEOUT": "600",
+    "KEEPALIVE": "2",
+    "MAX_REQUESTS": "500",
+    "MAX_REQUESTS_JITTER": "100",
+    "PRELOAD_APP": "1",
+    "LOG_LEVEL": "info",
+    "MODEL_PATH": "/app/best.pt",
+    "WORKER_CONNECTIONS": "1000",
+    "WORKER_TEMP_DIR": "/dev/shm",
+    "PIP_TIMEOUT": "600",
+    "MODEL_LOADING_TIMEOUT": "180",
+    "CAMERA_CONNECTION_TIMEOUT": "10",
+    "ACCESS_LOG_FORMAT": "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%(a)s\" %(D)s"
+  }
+}
+```
+
+#### 2. Dockerfile Alternativo na Raiz (Opcional)
+
+Crie um Dockerfile alternativo na raiz do projeto como fallback:
+
+```dockerfile
+# Dockerfile alternativo na raiz do projeto
+# Este arquivo redireciona para o Dockerfile real em DetectFace/
+# Garante que o Railway encontre o Dockerfile mesmo com configurações complexas
+
+# Usa o Dockerfile real do DetectFace como base
+FROM ./DetectFace/Dockerfile
+
+# Mantém todas as configurações do Dockerfile original
+# Este arquivo serve apenas como um ponteiro para o Dockerfile real
+```
+
+#### 3. Atualize .railway para Consistência
+
+```toml
+[build]
+# Força o uso do Docker builder (em vez do Railpack)
+builder = "dockerfile"
+# Caminho explícito para o Dockerfile
+dockerfilePath = "./DetectFace/Dockerfile"
+
+[service]
+# Define o Root Directory para o projeto DetectFace
+# Isso ativa o Docker builder em vez do Railpack
+sourceDir = "./DetectFace"
+name = "detecface"
+
+[deploy]
+# Configurações de deployment otimizadas
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+```
+
+#### 4. Vantagens do railway.json
+
+- **Força Explícita:** Sobrescreve a detecção automática do Railway
+- **Configuração Centralizada:** Todas as configurações em um único arquivo
+- **Prioridade Alta:** O Railway dá prioridade ao railway.json sobre outras configurações
+- **Clareza:** Deixa explícito que queremos usar DOCKERFILE builder
+- **Flexibilidade:** Permite configurações avançadas de build e deploy
+
+#### 5. Passos para Implementação
+
+1. **Crie o arquivo railway.json** na raiz do projeto
+2. **Adicione o Dockerfile alternativo** na raiz (opcional, mas recomendado)
+3. **Atualize o arquivo .railway** para consistência
+4. **Faça commit e push** das alterações
+5. **Verifique no painel do Railway** se o builder mudou para DOCKERFILE
+6. **Monitore os logs** para confirmar que Python está sendo usado
+
+#### 6. Verificação
+
+Após o deploy, verifique se está usando Docker builder:
+
+```bash
+# Verifica logs do build
+railway logs --service detecface | grep -i docker
+
+# Verifica se Python está sendo usado
+railway logs --service detecface | grep -i python
+
+# Verifica se as dependências foram instaladas
+railway logs --service detecface | grep -i pip
+```
+
+#### 7. Troubleshooting
+
+Se ainda assim o Railpack for usado:
+
+1. **Verifique a sintaxe** do railway.json
+2. **Confirme o caminho** do Dockerfile está correto
+3. **Limpe o cache** do Railway: Settings → Build & Deploy → Clear Cache
+4. **Reinicie o serviço** no Railway
+5. **Contate o suporte** do Railway se o problema persistir
+
 ### Problema: Railway Migration from Dockerfile to Railpack (Anterior)
 
 **Nota:** Esta seção foi mantida para referência histórica, mas a solução acima (Root Directory com Docker) é a abordagem recomendada atualmente.
