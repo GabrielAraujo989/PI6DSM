@@ -61,7 +61,6 @@ test_*.py
 
 # Docker files (don't nest docker contexts)
 docker-compose*.yml
-Dockerfile*
 
 # Development artifacts
 .pytest_cache/
