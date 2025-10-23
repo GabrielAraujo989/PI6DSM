@@ -106,17 +106,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 EXPOSE ${PORT:-8000}
 
-# Script de inicialização que lê a variável de ambiente PORT do Railway
-COPY <<EOF /app/start.sh
-#!/bin/bash
-# Usa a porta injetada pelo Railway ou fallback para 8000
-PORT=\${PORT:-8000}
-echo "Iniciando aplicação na porta \$PORT"
-exec gunicorn --bind 0.0.0.0:\$PORT --workers \${WORKERS:-1} --timeout \${TIMEOUT:-600} --keepalive \${KEEPALIVE:-2} --max-requests \${MAX_REQUESTS:-500} --max-requests-jitter \${MAX_REQUESTS_JITTER:-100} --preload server:app
-EOF
-
-# Torna o script executável
-RUN chmod +x /app/start.sh
-
-# CMD para execução com o script que lê a variável de ambiente PORT
-CMD ["/app/start.sh"]
+# CMD para execução direta usando shell para ler variáveis de ambiente
+CMD ["sh", "-c", "PORT=${PORT:-8000} && echo \"Iniciando aplicação na porta $PORT\" && exec gunicorn --bind 0.0.0.0:$PORT --workers ${WORKERS:-1} --timeout ${TIMEOUT:-600} --keepalive ${KEEPALIVE:-2} --max-requests ${MAX_REQUESTS:-500} --max-requests-jitter ${MAX_REQUESTS_JITTER:-100} --preload server:app"]
