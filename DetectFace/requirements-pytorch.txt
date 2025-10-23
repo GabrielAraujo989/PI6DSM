@@ -1,0 +1,7 @@
+# PyTorch CPU-only version para evitar problemas de compatibilidade e instalação
+# Using stable version that's available for CPU - DO NOT UPDATE TO 2.7.0+cpu as it's not available
+torch==2.1.2+cpu
+torchvision==0.16.2+cpu
+
+# Index URL for PyTorch CPU versions - applies only to packages in this file
+--index-url https://download.pytorch.org/whl/cpu

@@ -16,6 +16,37 @@ Versão do Python Utilizada: 3.11.7
    ```
 4. O container estará pronto para receber requisições JWT do backend.
 
+### Usando Docker Compose (Recomendado)
+
+Para facilitar o deploy, use o docker-compose:
+
+```bash
+docker-compose up -d
+```
+
+### Reconstruindo o Container (Após Mudanças no requirements.txt)
+
+Se você fez alterações no requirements.txt (como correções de versão do PyTorch), use os scripts de reconstrução:
+
+**Linux/Mac:**
+```bash
+./rebuild_docker.sh
+```
+
+**Windows:**
+```cmd
+rebuild_docker.bat
+```
+
+Ou manualmente:
+```bash
+docker-compose down
+docker-compose down --rmi all
+docker-compose build --no-cache
+docker-compose up -d
+```
+
 > **Atenção:**
 > - Não suba arquivos de modelo (.pt), vídeos, imagens ou dados sensíveis para o repositório.
 > - O backend deve apontar para o endpoint do container (ex: http://detectface:8000 ou via ngrok para testes externos).
+> - Ao atualizar dependências, sempre reconstrua o container com --no-cache para garantir que as novas versões sejam instaladas.

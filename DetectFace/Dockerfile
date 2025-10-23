@@ -23,11 +23,15 @@ WORKDIR /app
 
 # Copia apenas requirements para aproveitar cache de camada
 COPY requirements.txt /app/requirements.txt
+COPY requirements-pytorch.txt /app/requirements-pytorch.txt
 
 # Atualiza pip e instala as dependências no prefix /install (será copiado para final image)
-# Usando timeout estendido e otimizações para evitar problemas de deploy
+# Primeiro instala as dependências padrão do PyPI
 RUN python -m pip install --upgrade pip setuptools wheel --timeout 300 && \
     python -m pip install --prefix=/install --no-cache-dir -r /app/requirements.txt --timeout 300
+
+# Depois instala o PyTorch do repositório específico
+RUN python -m pip install --prefix=/install --no-cache-dir -r /app/requirements-pytorch.txt --timeout 300
 
 ########################################
 ## Final image (menor, runtime only)
