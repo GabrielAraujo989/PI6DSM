@@ -1,16 +1,16 @@
-opencv-python~=4.11.0.86
+# OpenCV - usando apenas headless para evitar dependências GUI
+opencv-python-headless~=4.11.0.86
 ultralytics~=8.3.117
 
-# Torch versão alinhada ao ultralytics (verificar compatibilidade com CUDA/CPU no deploy)
-torch~=2.7.0
+# PyTorch CPU-only version para evitar problemas de compatibilidade e instalação
+torch==2.7.0+cpu --index-url https://download.pytorch.org/whl/cpu
+torchvision==0.22.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 fastapi
 uvicorn[standard]
 gunicorn
 python-dotenv
-opencv-python-headless
 pydantic
 python-jose
 pyjwt
-
 python-multipart

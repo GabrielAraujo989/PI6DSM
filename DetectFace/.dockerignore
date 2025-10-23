@@ -1,16 +1,71 @@
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+*.so
+
+# Environment and IDE
+.env
+.env.development
+.env.local
+.venv
+venv/
+ENV/
+env/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Logs and temporary files
 *.log
+*.tmp
+*.temp
+*.pid
+
+# Media files (test data)
 *.mp4
 *.avi
+*.mov
+*.wmv
 *.jpg
 *.jpeg
 *.png
+*.gif
+*.bmp
+*.tiff
+
+# Model files (will be mounted as volume)
+*.pt
 *.onnx
-# Não subir modelos grandes nem arquivos de vídeo/imagem de teste
+*.pth
+best.pt
 yolo11s.pt
-exemplo1.mp4
-exemplo2.mp4
+
+# Documentation and test files
+*.md
+docs/
+tests/
+test_*.py
+*_test.py
+
+# Git
+.git/
+.gitignore
+
+# Docker files (don't nest docker contexts)
+docker-compose*.yml
+Dockerfile*
+
+# Development artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/

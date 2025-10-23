@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  detectface:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: detectface-api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the model file as a volume (excluded from .dockerignore)
+      - ./best.pt:/app/best.pt:ro
+      # Optional: Mount logs directory for persistent logs
+      - ./logs:/app/logs
+    environment:
+      # Server configuration
+      - ENV=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WORKERS=2
+      - TIMEOUT=120
+      - LOG_LEVEL=info
+      
+      # Application settings
+      - SECRET_KEY=local-test-secret-key-change-in-production
+      - MODEL_PATH=/app/best.pt
+      
+      # Performance tuning
+      - WORKER_CONNECTIONS=1000
+      - WORKER_TEMP_DIR=/dev/shm
+      
+      # Timeouts
+      - PIP_TIMEOUT=300
+      - MODEL_LOADING_TIMEOUT=180
+      - CAMERA_CONNECTION_TIMEOUT=10
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    # Resource limits for Digital Ocean compatibility
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - detectface-network
+
+networks:
+  detectface-network:
+    driver: bridge
+
+# Optional: Add volume for persistent data
+volumes:
+  model-data:
+    driver: local
+  logs:
+    driver: local

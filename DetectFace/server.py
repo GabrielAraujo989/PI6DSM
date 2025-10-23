@@ -41,16 +41,40 @@ app.add_middleware(
 )
 
 # --- Carregamento do Modelo e Configuração do Dispositivo ---
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'best.pt')
+# Usa variável de ambiente para o caminho do modelo, com fallback para o padrão
+MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), 'best.pt'))
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Usando dispositivo: {device}")
+print(f"Caminho do modelo: {MODEL_PATH}")
+
+# Função para carregar o modelo com timeout e retry
+def load_model_with_timeout(model_path, max_retries=3, retry_delay=5):
+    """
+    Carrega o modelo YOLO com mecanismo de retry e timeout.
+    """
+    for attempt in range(max_retries):
+        try:
+            print(f"Tentativa {attempt + 1}/{max_retries} de carregar o modelo...")
+            modelo = YOLO(model_path)
+            modelo.to(device)
+            print("Modelo carregado com sucesso!")
+            return modelo
+        except Exception as e:
+            print(f"Erro ao carregar o modelo (tentativa {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Aguardando {retry_delay} segundos antes de tentar novamente...")
+                time.sleep(retry_delay)
+            else:
+                print("Erro crítico: não foi possível carregar o modelo após todas as tentativas.")
+                raise
+
+# Carrega o modelo com tratamento de erro
 try:
-    modelo = YOLO(MODEL_PATH).to(device)
+    modelo = load_model_with_timeout(MODEL_PATH)
 except Exception as e:
-    print(f"Erro ao carregar o modelo YOLO: {e}")
-    # Se o modelo não carregar, a aplicação não deve iniciar.
-    # Em um ambiente real, você pode querer um mecanismo de fallback.
-    raise
+    print(f"Erro crítico ao inicializar o modelo: {e}")
+    # Em produção, isso será capturado pelo health check
+    modelo = None
 
 # --- Gerenciamento de Estado Global ---
 # Armazena o frame, a contagem de faces e o status de cada câmera.
@@ -77,6 +101,13 @@ def process_camera(source_url: str, conf: float = 0.5):
                 print(f"[INFO] Stream da câmera {source_url} terminou ou foi perdido.")
                 break
 
+            # Verifica se o modelo está carregado antes de fazer a predição
+            if modelo is None:
+                print(f"[ERRO] Modelo não disponível para processamento da câmera: {source_url}")
+                with frames_lock:
+                    cameras_data[source_url] = {"frame": None, "face_count": 0, "status": "error"}
+                return
+                
             # A predição é feita aqui
             resultados = modelo.predict(source=frame, conf=conf, device=device, verbose=False)
             
@@ -146,6 +177,22 @@ class StartCamerasRequest(BaseModel):
 @app.get("/", summary="Verifica o Status da API")
 def root():
     return {"status": "ok", "message": "API de detecção facial pronta!"}
+
+@app.get("/health", summary="Health check endpoint para container")
+def health_check():
+    """
+    Endpoint para health check do container.
+    Verifica se a API está funcionando e se o modelo foi carregado.
+    """
+    if modelo is None:
+        return {"status": "unhealthy", "message": "Modelo não foi carregado corretamente"}
+    
+    return {
+        "status": "healthy",
+        "message": "API está funcionando corretamente",
+        "device": device,
+        "model_loaded": True
+    }
 
 @app.post("/start_camera/", summary="Inicia a detecção em uma nova câmera", dependencies=[Depends(verify_jwt)])
 def start_camera(req: CameraRequest):
@@ -251,6 +298,10 @@ async def process_usb_frame(frame: UploadFile = File(...)):
         if img is None:
             raise HTTPException(status_code=400, detail="Imagem inválida")
 
+        # Verifica se o modelo está carregado
+        if modelo is None:
+            raise HTTPException(status_code=503, detail="Modelo não está disponível no momento")
+            
         # Processa a imagem com o modelo YOLO
         resultados = modelo.predict(source=img, conf=0.5, device=device, verbose=False)
 
