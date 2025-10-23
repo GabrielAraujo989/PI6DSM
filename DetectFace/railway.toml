@@ -3,7 +3,7 @@
 [build]
 # Comando para build da aplicação
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "./Dockerfile"
 
 [deploy]
 # Configurações de deployment
@@ -36,7 +36,7 @@ ACCESS_LOG_FORMAT = "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s \"%(f)s\" \"%
 # Configurações de serviço
 [service]
 name = "detecface"
-sourceDir = "."
+# sourceDir = "."  # Comentado para evitar conflito com Root Directory configurado na UI
 
 # Comando de início explícito para otimizar o uso de recursos
 startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"
