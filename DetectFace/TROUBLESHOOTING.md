@@ -120,7 +120,7 @@ name = "detecface"
 sourceDir = "./DetectFace"
 
 # Comando de início otimizado para Docker builder
-startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"
+startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keep-alive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"
 ```
 
 #### 2. Configuração do package.json
@@ -140,7 +140,7 @@ startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepal
     "builder": "dockerfile",
     "dockerfilePath": "./Dockerfile",
     "buildCommand": "npm run build",
-    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keep-alive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
     "pythonVersion": "3.10",
     "sourceDir": "./DetectFace"
   }
@@ -224,7 +224,7 @@ Quando as configurações anteriores não funcionam, use um arquivo `railway.jso
     }
   },
   "deploy": {
-    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keep-alive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
@@ -366,7 +366,7 @@ Railway has deprecated the Dockerfile builder and now requires all deployments t
    # Removido sourceDir para evitar erro "Dockerfile does not exist" com Root Directory
    
    # Comando de início explícito para otimizar o uso de recursos com Railpack
-   startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"
+   startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keep-alive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app"
    ```
 
 2. **Update package.json for Railpack**

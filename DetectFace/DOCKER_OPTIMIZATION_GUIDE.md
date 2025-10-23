@@ -165,9 +165,9 @@ The default Gunicorn settings were not optimized for the resource constraints of
 Optimized Gunicorn configuration:
 
 ```dockerfile
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", 
-     "--timeout", "120", "--keepalive", "2", 
-     "--max-requests", "1000", "--max-requests-jitter", "100", 
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2",
+     "--timeout", "120", "--keep-alive", "2",
+     "--max-requests", "1000", "--max-requests-jitter", "100",
      "--preload", "server:app"]
 ```
 

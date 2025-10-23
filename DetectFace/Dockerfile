@@ -107,4 +107,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE ${PORT:-8000}
 
 # CMD para execução direta usando shell para ler variáveis de ambiente
-CMD ["sh", "-c", "PORT=${PORT:-8000} && echo \"Iniciando aplicação na porta $PORT\" && exec gunicorn --bind 0.0.0.0:$PORT --workers ${WORKERS:-1} --timeout ${TIMEOUT:-600} --keepalive ${KEEPALIVE:-2} --max-requests ${MAX_REQUESTS:-500} --max-requests-jitter ${MAX_REQUESTS_JITTER:-100} --preload server:app"]
+CMD ["sh", "-c", "PORT=${PORT:-8000} && echo \"Iniciando aplicação na porta $PORT\" && exec gunicorn --bind 0.0.0.0:$PORT --workers ${WORKERS:-1} --timeout ${TIMEOUT:-600} --keep-alive ${KEEPALIVE:-2} --max-requests ${MAX_REQUESTS:-500} --max-requests-jitter ${MAX_REQUESTS_JITTER:-100} --preload server:app"]

@@ -29,7 +29,7 @@
     "builder": "dockerfile",
     "dockerfilePath": "./Dockerfile",
     "buildCommand": "npm run build",
-    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keepalive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 600 --keep-alive 2 --max-requests 500 --max-requests-jitter 100 --preload server:app",
     "pythonVersion": "3.10",
     "sourceDir": "./DetectFace"
   }
