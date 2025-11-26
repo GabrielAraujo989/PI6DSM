@@ -1,13 +1,13 @@
 # Sprint 1
 Foi executado uma analise inicial para entrega da primeira sprint. Dentro da entrega estão:
 - [X] [Definição do escopo e requisitos](#escopo) ([funcionais](#requisitos-funcionais-rf) e [não funcionais](#requisitos-não-funcionais-rnf))
-- [ ] Modelagem inicial ([diagramas de caso de uso](./diagrama_caso_de_uso.svg), arquitetura ou equivalente)
+- [X] Modelagem inicial ([diagramas de caso de uso](./diagrama_caso_de_uso.svg), arquitetura ou equivalente)
 - [X] [Criação do repositório Grupo](https://github.com/GabrielAraujo989/PI6DSM) (Github)
-- [ ] Estrutura inicial do back-end (framework e API configurada)
-- [ ] Protótipo inicial do front-end (telas estáticas)
-- [ ] Banco de dados modelado (conceitual e lógico)
-- [ ] **Computação em Nuvem II**: definição e justificativa dos serviços em nuvem a serem utilizados
-- [ ] **Mineração de Dados**: definição da base de dados e planejamento inicial das técnicas de mineração
+- [X] [Estrutura inicial do back-end(estrutura em postman)](../../service/postman_tests.txt) (framework e API configurada)
+- [X] [Protótipo inicial do front-end](../../frontend/) (telas estáticas)
+- [X] [Banco de dados modelado](./DER.svg) (conceitual e lógico)
+- [X] **Computação em Nuvem II**: [definição e justificativa dos serviços em nuvem a serem utilizados](#computação-em-nuvem-ii)
+- [X] **Mineração de Dados**: [definição da base de dados e planejamento inicial das técnicas de mineração](#mineração-de-dados)
 
 ## Escopo
 ### Objetivo Geral
@@ -57,3 +57,11 @@ Desenvolver um sistema integrado capaz de **reconhecer rostos em tempo real** e 
 | RF05   | O frontend deve **mostrar em tempo real os rostos reconhecidos**.                 | Frontend              |
 | RF06   | O sistema deve permitir **gerenciamento de perfis e permissões**.                 | Service               |
 | RF07   | O sistema deve registrar **logs de eventos de reconhecimento facial**.            | Service               |
+
+## Computação em Nuvem II
+Neste projeto, a Computação em Nuvem é empregada para hospedar e gerenciar a base de dados de forma escalável e segura. Será utilizado um **banco de dados gerenciado em nuvem**, permitindo abstrair tarefas administrativas como backup, atualização e balanceamento de carga. Essa abordagem garante **alta disponibilidade, confiabilidade e facilidade de integração** com ferramentas analíticas e pipelines de dados. A escolha de um serviço gerenciado — como **MySQL ou PostgreSQL em provedores como Google Cloud SQL, AWS RDS ou Azure Database**. Além disso, o uso da nuvem permite o **trabalho colaborativo entre os membros do grupo**, simplificando a implantação e a reprodutibilidade dos resultados.
+
+### Mineração de Dados
+A base de dados para a mineração foi composta principalmente pelos conjuntos **Face Detection.v27i.yolov11** e **WIDER_FACE**, ambos estruturados para tarefas de detecção facial e divididos em subconjuntos de treinamento, validação e teste. Esses datasets incluem imagens anotadas com as classes “face” e “background”, permitindo o aprendizado supervisionado de modelos baseados em visão computacional.
+
+O planejamento inicial das técnicas de mineração considerou a utilização de **modelos YOLO (You Only Look Once)** para extrair padrões de detecção de faces em diferentes condições visuais. As etapas envolveram a configuração de parâmetros de treinamento, como tamanho de imagem e batch size, e o uso de scripts Python e notebooks para a execução experimental. Essa abordagem possibilita avaliar a capacidade preditiva dos modelos e ajustar suas métricas de desempenho de forma iterativa.
