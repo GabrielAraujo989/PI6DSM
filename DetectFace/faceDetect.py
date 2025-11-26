@@ -7,7 +7,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Carrega o modelo na GPU
 # modelo = YOLO('yolo11s.pt').to(device)
-modelo = YOLO('/home/gabriel/PI6DSM/DetectFace/best.pt').to(device)
+modelo_path = r"C:\Users\HenriquePC\Downloads\PI6DSM\PI6DSM\DetectFace\best.pt"
+modelo = YOLO(modelo_path).to(device)
 
 # Configurações
 confianca_minima = 0.5

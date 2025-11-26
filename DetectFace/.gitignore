@@ -37,3 +37,5 @@ __pycache__/
 yolo11s.pt
 exemplo1.mp4
 exemplo2.mp4
+.venv
+.venv2

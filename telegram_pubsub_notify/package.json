@@ -1,0 +1,17 @@
+{
+  "name": "telegram_pubsub_notify",
+  "version": "1.0.0",
+  "description": "",
+  "main": "consumer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/pubsub": "^5.2.0",
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3"
+  }
+}

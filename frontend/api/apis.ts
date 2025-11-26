@@ -30,7 +30,7 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
-  return config;
+  return config; 
 });
 
 // Interceptor para DetectFace API

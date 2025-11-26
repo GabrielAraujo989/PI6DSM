@@ -14,6 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import urllib.parse
 import io
+import requests
+
+last_count = -1
 
 # --- Configuração Inicial ---
 app = FastAPI(
@@ -258,6 +261,19 @@ async def process_usb_frame(frame: UploadFile = File(...)):
         resultado = resultados[0]
 
         num_faces = len(resultado.boxes)
+        global last_count
+        # --- Envio ao serviço externo (mensageria) ---
+        try:
+            if num_faces != last_count:
+                requests.post(
+                    "http://localhost:3333/send-counter",
+                    json={"people": int(num_faces)},
+                    timeout=1
+                )
+                last_count = num_faces
+        except Exception as e:
+            print(f"[WARN] Falha ao enviar contagem ao serviço: {e}")
+
 
         return {
             "face_count": num_faces,

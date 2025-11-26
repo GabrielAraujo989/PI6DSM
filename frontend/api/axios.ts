@@ -17,6 +17,8 @@ async function getTokenUniversal() {
 
 // Interceptor síncrono, mas injeta o token se já estiver no localStorage (web)
 api.interceptors.request.use((config) => {
+  console.log('Config ',config)
+  console.log(' URL ',Constants.expoConfig?.extra?.API_BASE_URL)
   let token = null;
   if (typeof window !== 'undefined' && window.localStorage) {
     token = window.localStorage.getItem('token');
